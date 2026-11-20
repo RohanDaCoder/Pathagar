@@ -1,7 +1,7 @@
 {
   "appId": "com.pathagar.app",
   "appName": "Pathagar",
-  "webDir": "www",
+  "webDir": "dist",
   "android": {
     "allowMixedContent": false
   },

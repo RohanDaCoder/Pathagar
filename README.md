@@ -1,57 +1,72 @@
 # Pathagar
 
-**A lightweight cross-platform app for reading Class 9-10 guide books — Android and Web (Netlify) from a single codebase.**
+**A lightweight cross-platform app for reading Class 9-10 guide books — Android and Web from a single TypeScript codebase.**
 
 The original "Class 9 All Subject Books" (`com.nahidnafiz.classninebooks`) app was
 reverse-engineered with apkscope to understand its data pipeline; this client was
 then written from scratch on top of it — no ads, small footprint, an English UI,
 a fully offline library, and a tag-based release system.
 
-| | |
-|---|---|
-| Repository | `RohanDaCoder/Pathagar` — the in-app updater looks for new versions in its Releases |
-| App ID | `com.pathagar.app` |
-| Web shell | ~280 KB (pdf.js 1.4 MB loads lazily, only while reading) · APK ~3.5 MB |
-| Data | 4 branches · 73 books · 1,247 chapters (SSC 2028, Madrasah, English Version, old set) |
-| Storage | IndexedDB — downloaded chapters read without internet |
+|            |                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------- |
+| Repository | `RohanDaCoder/Pathagar` — the in-app updater looks for new versions in its Releases   |
+| App ID     | `com.pathagar.app`                                                                    |
+| Web shell  | ~68 KB app code + 305 KB lazy pdf.js (1.1 MB worker, precached) · APK ~3.5 MB         |
+| Data       | 4 branches · 73 books · 1,247 chapters (SSC 2028, Madrasah, English Version, old set) |
+| Storage    | IndexedDB — downloaded chapters read without internet                                 |
 
----
+## Toolchain
 
-## Architecture (modular, no build step)
+**bun 1.4.5** is the package manager, runtime, typechecker, formatter and test
+runner; **vite 8** builds (and serves) the web app; **TypeScript 7** with
+`strict` across the board. Capacitor 6 wraps the same `dist/` build into the
+Android app.
+
+| Task        | Command                                                                     |
+| ----------- | --------------------------------------------------------------------------- |
+| Install     | `bun install`                                                               |
+| Dev server  | `bun run dev` (with `/pdf/*` proxy)                                         |
+| Type check  | `bun check` (native, all cores)                                             |
+| Format      | `bun fmt` / `bun fmt --check`                                               |
+| Lint        | `bun run lint` (Biome)                                                      |
+| Test        | `bun test`                                                                  |
+| Build       | `bun run build` → `dist/`                                                   |
+| Serve build | `bun run serve` (static + PDF proxy)                                        |
+| Full gate   | `bun check && bun fmt --check && bun run lint && bun test && bun run build` |
+
+There is no Python anywhere in the project — the old dev proxy became the
+vite dev-server proxy, and `scripts/serve.ts` (Bun) serves production builds
+locally.
+
+## Architecture
 
 ```
 pathagar/
-├── www/                          ← the app (this is the website AND the Android app)
-│   ├── index.html                ← empty shell (CSP, meta, bottom nav)
-│   ├── css/app.css               ← full stylesheet
-│   ├── js/
-│   │   ├── main.js               ← composition root: router + view dispatch + SW registration
-│   │   ├── config.js             ← platform detection, settings, global state (S)
-│   │   ├── utils.js              ← DOM helpers, number formatting, toasts, SVG icons
-│   │   ├── db.js                 ← IndexedDB (files + meta stores)
-│   │   ├── net.js                ← network adapter (fetch / CapacitorHttp range-chunks)
-│   │   ├── catalog.js            ← API + localStorage cache + bundled snapshot
-│   │   ├── dlqueue.js            ← download manager (queue, concurrency, progress, cancel)
-│   │   ├── router.js             ← hash router
-│   │   ├── updater.js            ← GitHub Releases update check + semver comparison
-│   │   ├── reader.js             ← pdf.js viewer
-│   │   └── views/                ← home · branch · book · library · settings
-│   ├── vendor/                   ← pdf.js 3.11 (lazy), @capacitor/core
-│   ├── manifest.webmanifest · sw.js · _redirects
-│   └── catalog-snapshot.json     ← offline catalog (4 branches, 73 books)
-├── android/                      ← Capacitor 6 project (com.pathagar.app)
-├── .github/
-│   ├── workflows/ci.yml          ← PR/push: JS syntax + sw precache checks + debug APK
-│   ├── workflows/release.yml     ← tag v* → signed APK + web zip → GitHub Release
-│   └── workflows/netlify.yml     ← (optional) main push → Netlify deploy
-└── netlify.toml · capacitor.config.json · package.json
+├── index.html            ← vite entry: shell, CSP, bottom nav
+├── src/                  ← strict TypeScript, no framework, hash-routed
+│   ├── main.ts           ← composition root: router + view dispatch + SW registration
+│   ├── config.ts         ← platform detection, settings, global state (S)
+│   ├── types.ts          ← shared domain types
+│   ├── catalog.ts        ← API + localStorage cache + bundled snapshot (static import)
+│   ├── net.ts            ← fetch (web) / CapacitorHttp (native, 1 MiB ranged chunks)
+│   ├── db.ts             ← IndexedDB (files + meta stores)
+│   ├── dlqueue.ts        ← download manager (queue, concurrency, progress, cancel)
+│   ├── updater.ts        ← GitHub Releases check + semver compare
+│   ├── reader.ts         ← pdf.js viewer (npm pdfjs-dist@3.11, lazy chunk)
+│   ├── app.css           ← full stylesheet
+│   └── views/            ← home · branch · book · library · settings
+├── public/               ← icons, _redirects (copied verbatim to dist/)
+├── scripts/serve.ts      ← Bun.serve: dist + /pdf proxy for local prod preview
+├── android/              ← Capacitor 6 project (webDir = dist)
+└── .github/workflows/    ← ci · release · netlify · pages
 ```
 
-**Dependency direction:** `main.js → views → {catalog, dlqueue, reader, utils}
-→ {net, db} → config`. No cycles — the download queue knows nothing about the UI;
-it plugs in through the `DL.onRowUpdate` / `DL.openChapter` callback injections.
-To add a view: a file in `js/views/` + one line in `main.js` + (for JS files) one
-line in the `sw.js` precache list — CI catches it if you forget.
+**Dependency direction:** `main.ts → views → {catalog, dlqueue, reader, utils}
+→ {net, db} → config`. No cycles — the download queue knows nothing about the
+UI; it plugs in through the `DL.onRowUpdate` / `DL.openChapter` callback
+injections. The service worker is **generated** by vite-plugin-pwa (precache +
+API network-first), so there is no hand-maintained precache list and no
+coverage check in CI. See [AGENTS.md](AGENTS.md) for the full rules.
 
 ## How it works (from the reverse-engineering session)
 
@@ -64,45 +79,36 @@ PDF download        GET  ────────►    /books?key=…&category=
 ```
 
 - **API host** has open CORS → the browser fetches data directly.
-- **PDF host** sends no CORS → on web, Netlify's `/pdf/*` reverse proxy (`_redirects`
-  + `netlify.toml`); on Android, `CapacitorHttp` (native HTTP, 1 MB range-chunks for
-  accurate progress).
+- **PDF host** sends no CORS → on web, the same-origin `/pdf/*` reverse proxy
+  (Netlify `_redirects` in production, vite/`serve.ts` locally); on Android,
+  `CapacitorHttp` (native HTTP, 1 MiB range-chunks for accurate progress).
 - **Storage:** IndexedDB on both platforms (`pathagar` DB, `ptg:` localStorage prefix).
-- **Updater:** on launch, checks `api.github.com/repos/RohanDaCoder/Pathagar/releases/latest`
-  (`updater.js`), semver-compares, shows a banner on Home linking the APK download.
-  On web, the SW (`ptg-v<version>` cache) hot-updates automatically.
+- **Updater:** on launch, checks `releases/latest`, semver-compares, shows a
+  banner on Home linking the APK. On web, the service worker hot-updates.
 
 ## Development workflow (PR-based)
 
-We follow PR-based development: the **orchestrator** reviews and merges, the
-**developer** works on branches and sends PRs.
+`main` is protected: the **orchestrator** reviews and merges, the **developer**
+works on branches and sends PRs.
 
 ```bash
-# 1. create a branch
 git switch -c feat/<name>
-
-# 2. test locally (same shape as Netlify: static + /pdf/* proxy)
-python3 scripts/local_proxy.py 8123      # → http://127.0.0.1:8123
-npm install && npx cap sync android      # re-sync when www/ changes
-
-# 3. commit + push + PR
+# …edit src/…
+bun check && bun fmt && bun run lint && bun test && bun run build   # the CI gate, locally
 git add -A && git commit -m "feat: …"
 git push -u origin feat/<name>
 gh pr create --fill
-# CI runs automatically (JS checks + debug APK artifact)
+# CI runs: bun check · fmt · lint · test · build + Android debug APK
 ```
-
-No direct pushes to `main` — every change goes through a PR. Fill in the PR
-template checklist on each one.
 
 ## Release process (tag-based)
 
 ```bash
-# 1. update APP_VERSION in www/js/config.js (e.g. '1.0.2') and merge
+# 1. bump APP_VERSION in src/config.ts AND version in package.json, merge via PR
 # 2. tag and push
-git tag v1.0.2 && git push origin v1.0.2
-# 3. GitHub Actions builds the signed Pathagar-v1.0.2.apk + pathagar-web-v1.0.2.zip
-#    and publishes the GitHub Release automatically
+git tag -a v1.0.2 -m "Pathagar v1.0.2 — …" && git push origin v1.0.2
+# 3. Actions builds the signed Pathagar-v1.0.2.apk + pathagar-web-v1.0.2.zip
+#    and publishes the GitHub Release
 ```
 
 `versionCode` is derived from the tag (major×10000 + minor×100 + patch). Once a
@@ -112,44 +118,40 @@ release is published, older installs show the update banner.
 
 The `pathagar-release-keystore/` folder (delivered to the developer's workspace)
 holds the keystore and password. **Keep it private and back it up — if lost,
-future updates cannot install over existing installs.** Set the repo secrets
-(Settings → Secrets and variables → Actions):
+future updates cannot install over existing installs.** Set the repo secrets:
 
 ```bash
 gh secret set KEYSTORE_BASE64 < pathagar-release-keystore/keystore.base64
-gh secret set KEYSTORE_PASSWORD < pathagar-release-keystore/PASSWORD.txt   # the raw value lives in that file
+gh secret set KEYSTORE_PASSWORD < pathagar-release-keystore/PASSWORD.txt
 gh secret set KEY_ALIAS --body "pathagar"
 gh secret set KEY_PASSWORD  < pathagar-release-keystore/PASSWORD.txt
 ```
 
-(Run `gh auth login` first if needed.) Without the secrets the release workflow
-will not sign — set them before pushing a tag.
+## Web deploys
 
-## Web deploy (Netlify)
+**Netlify (primary home):** the `netlify.yml` workflow builds `dist/` and
+deploys it with the official [netlify/actions](https://github.com/netlify/actions)
+CLI action on every push to `main`. Until the `NETLIFY_AUTH_TOKEN` /
+`NETLIFY_SITE_ID` secrets are set, the deploy job shows as **skipped** (gray) —
+by design, so the workflow can never look green without having deployed.
+Netlify matters because its `/pdf/*` proxy is what makes chapter downloads work
+in browsers. Manual alternative: `bun run build` and drag `dist/` to
+[app.netlify.com/drop](https://app.netlify.com/drop).
 
-**Easiest (drag & drop):** [app.netlify.com/drop](https://app.netlify.com/drop) →
-drop the `www` folder — it goes live with the `/pdf/*` proxy from `_redirects`.
-
-**Auto-deploy (CI):** `netlify.yml` is ready; just add two secrets:
-`NETLIFY_AUTH_TOKEN` (Netlify → User settings → Applications → Personal access
-tokens) and `NETLIFY_SITE_ID` (Site settings → Site details → ID). After that,
-every push to `main` deploys `www/` automatically.
-
-> Tip: open the site in Android Chrome and tap **⋮ → Add to Home screen** to
-> install it as a PWA.
+**GitHub Pages (demo mirror):** the `pages.yml` workflow publishes the app to
+`https://<user>.github.io/Pathagar/` (built with `VITE_BASE=/Pathagar/`).
+Pages cannot reverse-proxy `/pdf/*`, so chapter **downloads don't work there** —
+the app detects the host and shows a banner; browsing and offline reading work.
 
 ## Android build (local)
 
 ```bash
-npm install                 # first time (the android project needs node_modules/@capacitor/android)
-npx cap sync android        # when www/ changes
-
-# Debug APK
-cd android && ./gradlew assembleDebug
-# → app/build/outputs/apk/debug/app-debug.apk
+bun install                 # first time (the android project needs @capacitor/android)
+bun run build && bun run cap:sync   # when src/ changes
+bun run build:apk           # debug APK → android/app/build/outputs/apk/debug/
 
 # Signed release (requires android/keystore.properties + release.jks)
-./gradlew assembleRelease -PversionName=1.0.1 -PversionCode=10001
+cd android && ./gradlew assembleRelease -PversionName=1.1.0 -PversionCode=10100
 ```
 
 `android/keystore.properties` (gitignored) format:
@@ -158,8 +160,8 @@ cd android && ./gradlew assembleDebug
 ## Configuration and key rotation
 
 The app's **Settings** page lets you change the API URL, key and proxy — with a
-connection test. If the API returns 403, the developer rotated the key; extract
-the new one from the latest APK:
+connection test. If the API returns 403, the upstream developer rotated the key;
+extract the new one from the latest APK:
 
 ```bash
 apkscope decompile <new apk> com.nahidnafiz.classninebooks.BuildConfig
@@ -168,7 +170,7 @@ apkscope decompile <new apk> com.nahidnafiz.classninebooks.BuildConfig
 ## Legal and usage note
 
 This client is for students' **personal study**. The guide books belong to their
-publishers; the original app's developer runs the server on ad revenue. Mirroring
-or redistributing the full catalog (~14 GB) is not the goal — download the books
-you read, and use the original app too if you like it. The repo contains only
-code and config, no PDFs.
+publishers; the original app's developer runs the server on ad revenue.
+Mirroring or redistributing the full catalog (~14 GB) is not the goal —
+download the books you read, and use the original app too if you like it. The
+repo contains only code and config, no PDFs.

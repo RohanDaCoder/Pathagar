@@ -1,0 +1,56 @@
+name: Deploy Web (GitHub Pages)
+
+# Deploys the built web app to GitHub Pages on every push to main.
+# The app is hash-routed, so the /Pathagar/ subpath works; vite is built with
+# VITE_BASE=/Pathagar/ so assets, the manifest and the service worker all
+# resolve under that prefix.
+#
+# NOTE: this is a DEMO mirror. GitHub Pages cannot reverse-proxy /pdf/* to the
+# guide PDF host (which sends no CORS headers), so chapter DOWNLOADS don't work
+# here — the app shows a banner explaining this. Full functionality lives on
+# the Netlify deployment and in the Android APK.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Pages bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5 # cache: enabled by default, keyed on bun.lock
+      - uses: actions/configure-pages@v6
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+        env:
+          VITE_BASE: /Pathagar/
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

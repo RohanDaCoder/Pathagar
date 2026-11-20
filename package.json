@@ -1,20 +1,32 @@
 {
   "name": "pathagar",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Pathagar — Class 9-10 guide book reader (web + Android, single codebase)",
+  "type": "module",
   "scripts": {
-    "serve": "python3 ../scripts/local_proxy.py",
-    "cap:sync": "npx cap sync android",
-    "cap:open": "npx cap open android",
-    "cap:run": "npx cap run android",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "bun scripts/serve.ts",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "cap:run": "cap run android",
     "build:apk": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/core": "^6.2.1"
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/core": "^6.2.3",
+    "pdfjs-dist": "3.11.174"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.1"
+    "@biomejs/biome": "^2.6.8",
+    "@capacitor/cli": "^6.2.3",
+    "@types/bun": "^1.4.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0"
   }
 }

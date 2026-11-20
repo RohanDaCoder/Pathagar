@@ -37,3 +37,9 @@ google-services.json
 # Web/node (Pathagar)
 node_modules/
 .DS_Store
+
+# Vite build output
+dist/
+
+# Bun
+.bun-cache/
