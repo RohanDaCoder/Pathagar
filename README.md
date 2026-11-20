@@ -22,16 +22,16 @@ formatter, linter and test runner; **vite 8** builds (and serves) the web app; *
 `strict` across the board. Capacitor 6 wraps the same `dist/` build into the
 Android app.
 
-| Task        | Command                                                                     |
-| ----------- | --------------------------------------------------------------------------- |
-| Install     | `bun install`                                                               |
-| Dev server  | `bun run dev` (with `/pdf/*` proxy)                                         |
-| Type check  | `bun check` (native, all cores)                                             |
-| Format      | `bun fmt` / `bun fmt --check`                                               |
-| Lint        | `bun lint` (built-in, strict)                                               |
-| Test        | `bun test`                                                                  |
-| Build       | `bun run build` → `dist/`                                                   |
-| Serve build | `bun run serve` (static + PDF proxy)                                        |
+| Task        | Command                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| Install     | `bun install`                                                           |
+| Dev server  | `bun run dev` (with `/pdf/*` proxy)                                     |
+| Type check  | `bun check` (native, all cores)                                         |
+| Format      | `bun fmt` / `bun fmt --check`                                           |
+| Lint        | `bun lint` (built-in, strict)                                           |
+| Test        | `bun test`                                                              |
+| Build       | `bun run build` → `dist/`                                               |
+| Serve build | `bun run serve` (static + PDF proxy)                                    |
 | Full gate   | `bun check && bun fmt --check && bun lint && bun test && bun run build` |
 
 There is no Python anywhere in the project — the old dev proxy became the
