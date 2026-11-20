@@ -15,8 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { S } from "@/config";
-import { DL } from "@/dlqueue";
+import { DL } from "@/downloads";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
 import { parseBookName, stripLeadNum } from "@/lib/titles";
@@ -79,7 +78,7 @@ export function DownloadsDialog({
   useDlVersion();
   const navigate = useNavigate();
   const rows = [...DL.jobs.entries()]
-    .map(([id, job]) => ({ id, job, st: S.dl.get(id) }))
+    .map(([id, job]) => ({ id, job, st: DL.stateOf(id) }))
     .filter((r) => r.st)
     .toSorted((a, b) => {
       const rank = { downloading: 0, queued: 1, error: 2, done: 3 } as const;

@@ -1,36 +1,22 @@
-/* scripts/make-snapshot.ts — regenerate src/catalog-snapshot.json.
-   Walks the guide API, runs every chapter title through the parser adapter
-   (src/lib/titles.ts) and writes the clean, ordered contract that ships in
-   the app bundle. Run from the repo root:  bun scripts/make-snapshot.ts */
+/* scripts/make-snapshot.ts — regenerate src/catalog-snapshot.json from the
+   guide API. Branch set and labels come from src/lib/branches.ts (SSOT);
+   book-name fixes from src/lib/nameFixes.ts. Run from the repo root:
+   bun scripts/make-snapshot.ts */
 
-import {
-  compareChapters,
-  parseTitle,
-  parseBookName,
-  withMathNames,
-} from "../src/lib/titles";
+import { BRANCHES } from "../src/lib/branches";
+import { NAME_FIXES } from "../src/lib/nameFixes";
+import { compareChapters, parseTitle, withMathNames } from "../src/lib/titles";
 
 const API = "https://books.tetashweb.xyz/api/v1/app/";
-/* Upload-side name fixes applied before parsing, so regenerating the
-   snapshot keeps them (API names with mixed English/Bengali spelling). */
-const NAME_FIXES: Record<string, string> = {
-  "বাংলা 2nd পত্র গাইড (SSC 2028)": "বাংলা ২য় পত্র গাইড (SSC 2028)",
-};
 // The key ships in the original app; see AGENTS.md before changing endpoints.
 const KEY = "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3";
-/* branch roots of the guide tree (see the Stage-1 report) */
-const BRANCHES: { id: number; label: string }[] = [
-  { id: 18203, label: "Bangla Version (SSC 2028)" },
-  { id: 17786, label: "মাদ্রাসার গাইড (Madrasah Guide)" },
-  { id: 17794, label: "English Version Guide (Nine)" },
-  { id: 101, label: "নবম শ্রেণীর গাইড, পুরাতন (Older guide set)" },
-];
 
 interface RawChapter {
   id: number;
   title: string;
   pdf: string;
 }
+
 function isChapter(x: unknown): x is RawChapter {
   if (typeof x !== "object" || x === null) return false;
   const id = Reflect.get(x, "id");
@@ -58,7 +44,7 @@ async function get(path: string, params: Record<string, string | number>) {
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, String(v));
   const r = await fetch(u);
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
-  // API boundary: guide API's documented envelope; validated by Stage-1 harness
+  // API boundary: guide API's documented envelope
   const env: unknown = await r.json();
   const data =
     typeof env === "object" && env !== null ? Reflect.get(env, "data") : null;
@@ -81,7 +67,8 @@ async function chaptersOf(bookId: number): Promise<RawChapter[]> {
   const out: RawChapter[] = [];
   let page = 1;
   for (;;) {
-    // eslint-disable-next-line no-await-in-loop -- pagination must stay sequential
+    // pagination must stay sequential
+    // eslint-disable-next-line no-await-in-loop
     const d = await get("books", { category: bookId, limit: 300, page });
     const batch = d.data.filter(isChapter);
     out.push(...batch);
@@ -100,7 +87,9 @@ const snap = {
 
 let totalChapters = 0;
 for (const br of BRANCHES) {
-  // eslint-disable-next-line no-await-in-loop -- branches load sequentially by design
+  if (br.hidden) continue; // hidden branches never ship
+  // branches load sequentially by design
+  // eslint-disable-next-line no-await-in-loop
   const branchBooks = await get("categories", { parent: br.id, limit: 200 });
   const booksRaw = (branchBooks.data || []).filter(isBook);
   const books = [];
@@ -108,7 +97,8 @@ for (const br of BRANCHES) {
     (a, b) => (a.order ?? 0) - (b.order ?? 0),
   )) {
     const bk = { ...rawBook, name: NAME_FIXES[rawBook.name] ?? rawBook.name };
-    // eslint-disable-next-line no-await-in-loop -- chapters of one book load sequentially
+    // chapters of one book load sequentially
+    // eslint-disable-next-line no-await-in-loop
     const raw = await chaptersOf(bk.id);
     const parsed = raw
       .map((c) => ({ c, p: withMathNames(bk.name, parseTitle(c.title)) }))
@@ -123,15 +113,11 @@ for (const br of BRANCHES) {
       pdf: c.pdf,
     }));
     totalChapters += chapterList.length;
-    const bp = parseBookName(bk.name);
     books.push({
       id: bk.id,
       name: bk.name,
-      cleanName: bp.name,
-      tags: bp.tags,
       image: bk.image ?? undefined,
       order: bk.order,
-      chapters: chapterList.length,
       chapterList,
     });
     console.log(`  ${bk.name}: ${chapterList.length} chapters`);
@@ -139,14 +125,14 @@ for (const br of BRANCHES) {
   snap.branches.push({
     id: br.id,
     label: br.label,
-    total_chapters: books.reduce((a, b) => a + b.chapters, 0),
+    total_chapters: books.reduce((a, b) => a + b.chapterList.length, 0),
     books,
   });
 }
 
 await Bun.write(
   new URL("../src/catalog-snapshot.json", import.meta.url),
-  JSON.stringify(snap),
+  JSON.stringify(snap, null, 2) + "\n",
 );
 console.log(
   `Wrote src/catalog-snapshot.json — ${snap.branches.length} branches, ${totalChapters} chapters`,

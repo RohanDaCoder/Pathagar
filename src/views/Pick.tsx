@@ -1,65 +1,30 @@
-/* views/Pick.tsx — MCQ / CQ chooser. Subjects that ship as two uploads
-   (e.g. গণিত গাইড CQ + গণিত গাইড MCQ) open this screen from the branch
-   card; picking a version leads to that book's chapter list. */
+/* views/Pick.tsx — MCQ/CQ chooser for subjects that ship as two uploads. */
 
 import { Link, useParams } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { S } from "@/config";
-import { loadSnapshot } from "@/catalog";
-import { bookCore, isMcqBook, parseBookName } from "@/lib/titles";
+import { catalog } from "@/catalog";
+import { isMcqBook, isTwin, parseBookName } from "@/lib/titles";
 import type { Book } from "@/types";
 
 export function Pick() {
   const { bookId = "" } = useParams();
-  const snap = loadSnapshot();
-
-  let base: Book | null = null;
-  let branchLabel = "";
-  for (const b of snap.branches) {
-    const f = b.books.find((x) => String(x.id) === bookId);
-    if (f) {
-      base = { id: String(f.id), name: f.name, branchId: b.id };
-      branchLabel = b.label;
-      break;
-    }
-  }
+  const ref = catalog.findBook(bookId);
+  const base = ref?.book ?? null;
 
   /* the sibling upload: same branch, same subject core, opposite variant */
-  let sibling: Book | null = null;
-  if (base) {
-    const core = bookCore(base.name);
-    for (const b of snap.branches) {
-      if (base.branchId && b.id !== base.branchId) continue;
-      const f = b.books.find(
-        (x) =>
-          String(x.id) !== bookId &&
-          bookCore(x.name) === core &&
-          isMcqBook(x.name) !== isMcqBook(base.name),
-      );
-      if (f) {
-        sibling = { id: String(f.id), name: f.name, branchId: b.id };
-        break;
-      }
-    }
-  }
+  const sibling =
+    base && ref
+      ? (catalog.snapshot.branches
+          .find((b) => b.id === ref.branchId)
+          ?.books.find((x) => isTwin(base, x)) ?? null)
+      : null;
 
   const options = [base, sibling]
     .filter((b): b is Book => b !== null)
     .toSorted((a, b) => Number(isMcqBook(b.name)) - Number(isMcqBook(a.name))); // MCQ first
 
-  const countOf = (bk: Book): number => {
-    for (const b of snap.branches) {
-      const f = b.books.find((x) => String(x.id) === bk.id);
-      /* the snapshot stores full chapter arrays even though the Book type
-         doesn't declare them — read defensively */
-      const cl = f ? Reflect.get(f, "chapterList") : undefined;
-      if (Array.isArray(cl)) return cl.length;
-    }
-    return 0;
-  };
-
-  if (!base) {
+  if (!base || !ref) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6">
         <Link
@@ -81,11 +46,11 @@ export function Pick() {
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6">
       <nav className="mb-1 flex items-center gap-1 text-sm text-muted-foreground">
         <Link
-          to={`/branch/${base.branchId}`}
+          to={`/branch/${ref.branchId}`}
           className="inline-flex items-center gap-1 hover:underline"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />{" "}
-          {branchLabel || "Back"}
+          {ref.branchLabel || "Back"}
         </Link>
       </nav>
       <h1 className="text-xl font-bold">{bp.name}</h1>
@@ -99,11 +64,7 @@ export function Pick() {
             key={bk.id}
             className="flex cursor-pointer items-center gap-4 p-5 transition-colors hover:bg-muted/50"
             onClick={() => {
-              S.bookCtx.set(String(bk.id), {
-                id: String(bk.id),
-                name: bk.name,
-                branchId: bk.branchId,
-              });
+              catalog.rememberBook({ ...bk, branchId: ref.branchId });
               window.location.hash = `#/book/${bk.id}`;
             }}
           >
@@ -118,7 +79,7 @@ export function Pick() {
                 {isMcqBook(bk.name) ? "MCQ" : "CQ"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {countOf(bk) || "…"} chapters
+                {catalog.chapterCountOf(bk.id) || "…"} chapters
               </p>
             </div>
             <ChevronRight

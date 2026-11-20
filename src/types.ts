@@ -13,9 +13,10 @@ export interface Book {
   id: number | string;
   name: string;
   image?: string;
-  chapters?: number;
   order?: number;
   branchId?: number; // set by the branch/book views when queuing downloads
+  /** full parsed chapter list (snapshot books carry it for offline fallback) */
+  chapterList?: Chapter[];
 }
 
 /* Raw API chapter, enriched by the title parser adapter (lib/titles.ts).
@@ -70,12 +71,6 @@ export interface DlState {
   bookId?: string;
   /** rolling speed estimate in bytes/s (set by the queue while downloading) */
   speed?: number;
-}
-
-export interface BookCtx {
-  id: string;
-  name: string;
-  branchId?: number;
 }
 
 export type { ParsedTitle, ChapterKind };

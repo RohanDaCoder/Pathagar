@@ -6,13 +6,13 @@ import { BookOpen, ChevronRight, Library } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { APP_NAME, APP_VERSION } from "@/config";
-import { loadSnapshot } from "@/catalog";
+import { catalog } from "@/catalog";
 import { DB } from "@/db";
 import { fmtMB } from "@/lib/format";
 
 export function Home() {
   const navigate = useNavigate();
-  const snap = loadSnapshot();
+  const snap = catalog.snapshot;
   const [meta, setMeta] = useState<Awaited<
     ReturnType<typeof DB.allMeta>
   > | null>(null);

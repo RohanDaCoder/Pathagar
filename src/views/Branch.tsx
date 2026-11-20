@@ -7,11 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ErrorState";
-import { S } from "@/config";
-import { loadSnapshot, getBooks } from "@/catalog";
+import { catalog } from "@/catalog";
 import {
-  bookCore,
   isMcqBook,
+  isTwin,
   parseBookName,
   streamOf,
   STREAM_LABEL,
@@ -24,7 +23,7 @@ import type { Book, ListResult } from "@/types";
 export function Branch() {
   const { branchId = "" } = useParams();
   const id = Number.parseInt(branchId, 10);
-  const snap = loadSnapshot();
+  const snap = catalog.snapshot;
   const meta = snap.branches.find((b) => b.id === id);
   const label = meta?.label || "Guide";
 
@@ -39,7 +38,10 @@ export function Branch() {
     let cancelled = false;
     void (async () => {
       try {
-        const [books, metas] = await Promise.all([getBooks(id), DB.allMeta()]);
+        const [books, metas] = await Promise.all([
+          catalog.getBooks(id),
+          DB.allMeta(),
+        ]);
         if (cancelled) return;
         const saved: Record<string, number> = {};
         for (const m of metas) saved[m.bookId] = (saved[m.bookId] || 0) + 1;
@@ -106,12 +108,8 @@ export function Branch() {
 
   function bookCard(bk: Book): React.JSX.Element {
     const bp = parseBookName(bk.name);
-    /* the MCQ/CQ twin of this subject — same core name, opposite variant */
     const twin = data?.items.find(
-      (x) =>
-        String(x.id) !== String(bk.id) &&
-        bookCore(x.name) === bookCore(bk.name) &&
-        isMcqBook(x.name) !== isMcqBook(bk.name),
+      (x) => isTwin(bk, x) && String(x.id) !== String(bk.id),
     );
     return (
       /* names are centred: the old avatar + chevron layout left short names
@@ -120,11 +118,7 @@ export function Branch() {
         key={bk.id}
         className="flex cursor-pointer flex-col items-center gap-1.5 p-4 text-center transition-colors hover:bg-muted/50"
         onClick={() => {
-          S.bookCtx.set(String(bk.id), {
-            id: String(bk.id),
-            name: bk.name,
-            branchId: id,
-          });
+          catalog.rememberBook({ ...bk, branchId: id });
           /* subjects that ship as MCQ + CQ uploads open the version chooser */
           window.location.hash = twin
             ? `#/book/${bk.id}/pick`
@@ -159,10 +153,7 @@ export function Branch() {
     const visible = data!.items.filter((bk) => {
       if (!isMcqBook(bk.name)) return true;
       return !data!.items.some(
-        (x) =>
-          String(x.id) !== String(bk.id) &&
-          !isMcqBook(x.name) &&
-          bookCore(x.name) === bookCore(bk.name),
+        (x) => String(x.id) !== String(bk.id) && isTwin(bk, x),
       );
     });
     const byStream = new Map<Stream, Book[]>();

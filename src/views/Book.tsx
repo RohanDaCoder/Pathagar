@@ -30,10 +30,9 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { toast } from "sonner";
-import { S } from "@/config";
-import { loadSnapshot, getChapters } from "@/catalog";
+import { catalog } from "@/catalog";
 import { DB } from "@/db";
-import { DL } from "@/dlqueue";
+import { DL } from "@/downloads";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
 import { errMessage } from "@/lib/errors";
@@ -99,21 +98,10 @@ export function Book() {
   const navigate = useNavigate();
   useDlVersion(); // re-render on download-queue updates
 
-  const snap = loadSnapshot();
-  const ctx = S.bookCtx.get(bookId);
-  let bookName = ctx?.name;
-  let branchId = ctx?.branchId;
-  if (!bookName) {
-    for (const b of snap.branches) {
-      const f = b.books.find((x) => String(x.id) === bookId);
-      if (f) {
-        bookName = f.name;
-        branchId = b.id;
-        break;
-      }
-    }
-  }
-  const branchLabel = snap.branches.find((b) => b.id === branchId)?.label || "";
+  const ref = catalog.findBook(bookId);
+  const bookName = ref?.book.name;
+  const branchId = ref?.branchId;
+  const branchLabel = ref?.branchLabel ?? "";
   const majorNum = majorParam !== undefined ? Number(majorParam) : null;
 
   const [data, setData] = useState<ListResult<Chapter> | null>(null);
@@ -130,7 +118,7 @@ export function Book() {
     void (async () => {
       try {
         const [chapters, metas] = await Promise.all([
-          getChapters(bookId),
+          catalog.getChapters(bookId),
           DB.allMeta(),
         ]);
         if (cancelled) return;
@@ -156,13 +144,13 @@ export function Book() {
   const items = data?.items ?? [];
   const done = items.filter(
     (ch) =>
-      saved.has(String(ch.id)) || S.dl.get(String(ch.id))?.status === "done",
+      saved.has(String(ch.id)) || DL.stateOf(String(ch.id))?.status === "done",
   ).length;
   const total = items.length;
   /* the meter counts in-flight byte progress too — a "finished chapters only"
      bar sits at 0% for minutes on slow networks (the reported broken meter) */
   let units = done;
-  for (const [id, st] of S.dl) {
+  for (const [id, st] of DL.entries()) {
     if (
       st.bookId === bookId &&
       !saved.has(id) &&
@@ -172,7 +160,7 @@ export function Book() {
       units += st.loaded / st.total;
   }
   const pct = total ? Math.min(100, Math.round((units / total) * 100)) : 0;
-  const speed = [...S.dl.values()]
+  const speed = DL.states()
     .filter((st) => st.status === "downloading" && st.bookId === bookId)
     .reduce((a, st) => a + (st.speed ?? 0), 0);
   const fronts = items.filter((c) => c.kind === "front");
@@ -285,7 +273,7 @@ export function Book() {
                   let n = 0;
                   for (const ch of items) {
                     const id = String(ch.id);
-                    if (!saved.has(id) && !S.dl.has(id)) {
+                    if (!saved.has(id) && !DL.has(id)) {
                       DL.enqueue(ch, book);
                       n++;
                     }
@@ -331,7 +319,7 @@ export function Book() {
   /* bare part row for the /part/:major view — number, progress, state */
   function partRow(ch: Chapter) {
     const id = String(ch.id);
-    const st = S.dl.get(id);
+    const st = DL.stateOf(id);
     const isSaved = saved.has(id);
     const isDownloading = st?.status === "downloading";
     const isQueued = st?.status === "queued";
@@ -437,7 +425,7 @@ export function Book() {
 
   function chapterRow(ch: Chapter, bk: Book) {
     const id = String(ch.id);
-    const st = S.dl.get(id);
+    const st = DL.stateOf(id);
     const isSaved = saved.has(id);
     const isDownloading = st?.status === "downloading";
     const isQueued = st?.status === "queued";

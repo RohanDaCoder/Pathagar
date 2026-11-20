@@ -13,14 +13,14 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
-import { APP_NAME, APP_VERSION, S, saveSettings } from "@/config";
+import { APP_NAME, APP_VERSION, saveSettings, settings } from "@/config";
 import { applyTheme } from "@/lib/theme";
 import { DB } from "@/db";
 import { storageEstimate } from "@/lib/storage";
 import { fmtMB } from "@/lib/format";
 
 export function Settings() {
-  const st = S.settings;
+  const st = settings;
   const [est, setEst] =
     useState<Awaited<ReturnType<typeof storageEstimate>>>(null);
   const { canInstall, install } = useInstallPrompt();
@@ -45,7 +45,7 @@ export function Settings() {
             name="theme"
             value={st.theme}
             onValueChange={(v) => {
-              S.settings.theme = v;
+              settings.theme = v;
               saveSettings();
               applyTheme(v);
             }}

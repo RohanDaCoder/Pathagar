@@ -25,7 +25,7 @@ import {
   useDownloadsOpen,
 } from "@/components/DownloadsPopup";
 import { Button } from "@/components/ui/button";
-import { DL } from "@/dlqueue";
+import { DL } from "@/downloads";
 import { Home } from "@/views/Home";
 import { Branch } from "@/views/Branch";
 import { Book } from "@/views/Book";
@@ -116,7 +116,7 @@ function Shell() {
   useEffect(() => {
     DL.onEnqueue = () => setDlOpen(true);
     return () => {
-      DL.onEnqueue = null;
+      DL.onEnqueue = () => {};
     };
   }, [setDlOpen]);
 
