@@ -102,7 +102,22 @@ export function Book() {
       saved.has(String(ch.id)) || S.dl.get(String(ch.id))?.status === "done",
   ).length;
   const total = items.length;
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  /* the meter counts in-flight byte progress too — a "finished chapters only"
+     bar sits at 0% for minutes on slow networks (the reported broken meter) */
+  let units = done;
+  for (const [id, st] of S.dl) {
+    if (
+      st.bookId === bookId &&
+      !saved.has(id) &&
+      st.status === "downloading" &&
+      st.total
+    )
+      units += st.loaded / st.total;
+  }
+  const pct = total ? Math.min(100, Math.round((units / total) * 100)) : 0;
+  const speed = [...S.dl.values()]
+    .filter((st) => st.status === "downloading" && st.bookId === bookId)
+    .reduce((a, st) => a + (st.speed ?? 0), 0);
   const fronts = items.filter((c) => c.kind === "front");
   const chapters = items.filter((c) => c.kind !== "front" && c.kind !== "back");
   const extras = items.filter((c) => c.kind === "back");
@@ -136,7 +151,20 @@ export function Book() {
 
       {total > 0 ? (
         <div className="mb-4 flex items-center gap-3">
-          <Progress value={pct} className="h-2 flex-1" />
+          <div className="min-w-0 flex-1">
+            <Progress
+              value={pct}
+              className="h-2"
+              aria-label="Book download progress"
+            />
+            {speed > 0 ? (
+              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                {speed < 1024 * 1024
+                  ? `${Math.round(speed / 1024)} KB/s`
+                  : `${(speed / (1024 * 1024)).toFixed(1)} MB/s`}
+              </p>
+            ) : null}
+          </div>
           <Button
             size="sm"
             disabled={done >= total}

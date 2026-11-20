@@ -4,7 +4,7 @@
      - web    : fetch via same-origin reverse proxy (Netlify /pdf/* -> pdf.tetashweb.xyz/*)
      - native : CapacitorHttp (native Java http, no CORS), 1 MiB ranged chunks for progress */
 import { CapacitorHttp } from "@capacitor/core";
-import { NATIVE, S } from "./config";
+import { API_KEY, API_URL, NATIVE, PDF_PROXY_PREFIX } from "./config";
 
 export class ApiError extends Error {
   status: number;
@@ -15,18 +15,20 @@ export class ApiError extends Error {
 }
 
 export function pdfFetchUrl(url: string): string {
-  if (NATIVE || !S.settings.proxyEnabled) return url;
-  const p = S.settings.proxyPrefix || "/pdf/";
+  if (NATIVE) return url; // native HTTP has no CORS — talk to the host directly
+  const p = PDF_PROXY_PREFIX.endsWith("/")
+    ? PDF_PROXY_PREFIX
+    : `${PDF_PROXY_PREFIX}/`;
   const m = url.match(/^https?:\/\/[^/]+\/(.*)$/);
-  return m ? (p.endsWith("/") ? p : `${p}/`) + m[1] : url;
+  return m ? p + m[1] : url;
 }
 
 export async function apiGet<T>(
   path: string,
   params: Record<string, string | number> = {},
 ): Promise<T> {
-  const url = new URL(S.settings.apiUrl.replace(/\/?$/, "/") + path);
-  url.searchParams.set("key", S.settings.apiKey);
+  const url = new URL(API_URL.replace(/\/?$/, "/") + path);
+  url.searchParams.set("key", API_KEY);
   for (const [k, v] of Object.entries(params))
     url.searchParams.set(k, String(v));
   if (NATIVE) {

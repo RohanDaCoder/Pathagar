@@ -123,7 +123,7 @@ export function Home() {
         </Link>
       ) : null}
 
-      <div className="grid gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {snap.branches.map((b) => (
           <Card
             key={b.id}
