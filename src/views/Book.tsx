@@ -1,28 +1,10 @@
 /* views/Book.tsx — chapter list of one book + the download toolbar.
-   Chapters arrive pre-parsed & ordered by the adapter (lib/titles.ts via
-   catalog.ts): num/label/display/pages/kind. Row state re-renders through
-   useDlVersion (the queue is external to React).
+   Chapters arrive pre-parsed & ordered by the catalog (lib/titles via
+   CatalogService). Rows live in views/book/rows.tsx. */
 
-   v1.5 structure:
-   - the book's MCQ twin (same subject, "… গাইড MCQ" upload) merges into this
-     list as a leading "MCQ" section — its card is hidden in the branch view
-   - books whose chapters split into parts (২.১, ২.২…) collapse to parent
-     rows; tapping one opens /book/:id/part/:major listing bare part numbers
-   - /book/:bookId/part/:major renders just those parts ("nothing else") */
-
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  FileText,
-  RotateCcw,
-  Sparkles,
-  WifiOff,
-  X,
-} from "lucide-react";
+import { useCallback } from "react";
+import { Link, useParams } from "react-router";
+import { ChevronLeft, Download, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,68 +16,21 @@ import { catalog } from "@/catalog";
 import { DB } from "@/db";
 import { DL } from "@/downloads";
 import { useDlVersion } from "@/hooks/useDlVersion";
-import { fmtMB } from "@/lib/format";
-import { errMessage } from "@/lib/errors";
-import { bnNum, parseBookName, stripLeadNum } from "@/lib/titles";
-import type { Book, Chapter, ListResult } from "@/types";
-
-function SectionLabel({ text }: { text: string }) {
-  return (
-    <p className="px-1 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {text}
-    </p>
-  );
-}
-
-/* one list entry: a plain chapter, or a parent row for a split chapter */
-type Row =
-  | { t: "ch"; ch: Chapter; book: Book }
-  | {
-      t: "grp";
-      major: number;
-      parts: Chapter[];
-      whole?: Chapter;
-      book: Book;
-    };
-
-/** collapse decimal splits (২.১, ২.২ …) into parent rows when a book has
-    "many splits of a single chapter" (≥ 4 parts); otherwise plain rows */
-function buildRows(chs: Chapter[], bk: Book): Row[] {
-  const numbered = chs.filter((c) => typeof c.num === "number");
-  const decimals = numbered.filter((c) => (c.num ?? 0) % 1 !== 0);
-  if (decimals.length < 4) return chs.map((ch) => ({ t: "ch", ch, book: bk }));
-  const rows: Row[] = [];
-  const majors = [
-    ...new Set(numbered.map((c) => Math.floor(c.num ?? 0))),
-  ].toSorted((a, b) => a - b);
-  for (const maj of majors) {
-    const whole = numbered.find((c) => c.num === maj);
-    const parts = numbered.filter(
-      (c) => Math.floor(c.num ?? 0) === maj && (c.num ?? 0) % 1 !== 0,
-    );
-    if (parts.length)
-      rows.push({ t: "grp", major: maj, parts, whole, book: bk });
-    else if (whole) rows.push({ t: "ch", ch: whole, book: bk });
-  }
-  for (const ch of chs)
-    if (typeof ch.num !== "number") rows.push({ t: "ch", ch, book: bk });
-  return rows;
-}
-
-/** parent display: the first part's title without its "— অংশ N" suffix or
-    its leading chapter number ("২. সেট ও ফাংশন — অংশ ১" → "সেট ও ফাংশন") */
-function parentTitle(parts: Chapter[]): string {
-  const d = parts[0]?.display || "";
-  const stripped = stripLeadNum(d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim());
-  return stripped || bnNum(parts[0]?.label || "") || "Chapter";
-}
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { bnNum, parseBookName } from "@/lib/titles";
+import {
+  buildRows,
+  ChapterRow,
+  GroupRow,
+  PartRow,
+  SectionLabel,
+} from "./book/rows";
 
 export function Book() {
   const { bookId = "", major: majorParam } = useParams<{
     bookId: string;
     major?: string;
   }>();
-  const navigate = useNavigate();
   useDlVersion(); // re-render on download-queue updates
 
   const ref = catalog.findBook(bookId);
@@ -104,51 +39,32 @@ export function Book() {
   const branchLabel = ref?.branchLabel ?? "";
   const majorNum = majorParam !== undefined ? Number(majorParam) : null;
 
-  const [data, setData] = useState<ListResult<Chapter> | null>(null);
-  const [error, setError] = useState<{ title: string; detail?: string } | null>(
-    null,
-  );
-  const [saved, setSaved] = useState<Set<string>>(new Set());
-  const [sizes, setSizes] = useState<Record<string, number>>({});
-
-  const [reload, setReload] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [chapters, metas] = await Promise.all([
-          catalog.getChapters(bookId),
-          DB.allMeta(),
-        ]);
-        if (cancelled) return;
-        const mine = metas.filter((m) => m.bookId === bookId);
-        setSaved(new Set(mine.map((m) => m.id)));
-        setSizes(Object.fromEntries(mine.map((m) => [m.id, m.size || 0])));
-        setData(chapters);
-      } catch (e) {
-        if (!cancelled)
-          setError({
-            title: "Couldn't load the chapter list",
-            detail: errMessage(e),
-          });
-      }
-    })();
-    return () => {
-      cancelled = true;
+  const fetchList = useCallback(async () => {
+    const [chapters, metas] = await Promise.all([
+      catalog.getChapters(bookId),
+      DB.allMeta(),
+    ]);
+    const mine = metas.filter((m) => m.bookId === bookId);
+    return {
+      chapters,
+      saved: new Set(mine.map((m) => m.id)),
+      sizes: Object.fromEntries(mine.map((m) => [m.id, m.size || 0])),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- reload is an intentional refetch trigger
-  }, [bookId, reload]);
+  }, [bookId]);
+  const { data, error, reload } = useAsyncData(fetchList);
 
+  const saved = data?.saved ?? new Set<string>();
+  const sizes = data?.sizes ?? {};
+  const items = data?.chapters.items ?? [];
   const book = { id: bookId, name: bookName || "Book", branchId };
-  const items = data?.items ?? [];
+
+  /* the meter counts in-flight byte progress too — a "finished chapters only"
+     bar sits at 0% for minutes on slow networks */
   const done = items.filter(
     (ch) =>
       saved.has(String(ch.id)) || DL.stateOf(String(ch.id))?.status === "done",
   ).length;
   const total = items.length;
-  /* the meter counts in-flight byte progress too — a "finished chapters only"
-     bar sits at 0% for minutes on slow networks (the reported broken meter) */
   let units = done;
   for (const [id, st] of DL.entries()) {
     if (
@@ -163,6 +79,7 @@ export function Book() {
   const speed = DL.states()
     .filter((st) => st.status === "downloading" && st.bookId === bookId)
     .reduce((a, st) => a + (st.speed ?? 0), 0);
+
   const fronts = items.filter((c) => c.kind === "front");
   const chapters = items.filter((c) => c.kind !== "front" && c.kind !== "back");
   const extras = items.filter((c) => c.kind === "back");
@@ -174,6 +91,7 @@ export function Book() {
         )
       : [];
   const bp = parseBookName(bookName || "Book");
+  const stale = data?.chapters.stale ?? false;
 
   const backLink = (
     <nav className="mb-1 flex items-center gap-1 text-sm text-muted-foreground">
@@ -225,13 +143,9 @@ export function Book() {
 
       {error ? (
         <ErrorState
-          title={error.title}
-          detail={error.detail}
-          onRetry={() => {
-            setData(null);
-            setError(null);
-            setReload((n) => n + 1);
-          }}
+          title="Couldn't load the chapter list"
+          detail={error}
+          onRetry={reload}
         />
       ) : !data ? (
         <div className="grid gap-2">
@@ -246,7 +160,16 @@ export function Book() {
             No parts found for this chapter.
           </p>
         ) : (
-          <div className="grid gap-2">{parts.map((ch) => partRow(ch))}</div>
+          <div className="grid gap-2">
+            {parts.map((ch) => (
+              <PartRow
+                key={String(ch.id)}
+                ch={ch}
+                book={book}
+                saved={saved.has(String(ch.id))}
+              />
+            ))}
+          </div>
         )
       ) : (
         <>
@@ -288,7 +211,7 @@ export function Book() {
           ) : null}
 
           <div className="grid gap-2">
-            {data.stale ? (
+            {stale ? (
               <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
                 <WifiOff className="size-4 shrink-0" aria-hidden="true" />
                 Offline — saved list
@@ -301,13 +224,43 @@ export function Book() {
             ) : (
               <>
                 {fronts.length ? <SectionLabel text="Contents" /> : null}
-                {fronts.map((ch) => chapterRow(ch, book))}
+                {fronts.map((ch) => (
+                  <ChapterRow
+                    key={String(ch.id)}
+                    ch={ch}
+                    book={book}
+                    saved={saved.has(String(ch.id))}
+                    size={sizes[String(ch.id)]}
+                  />
+                ))}
                 {mainRows.length ? <SectionLabel text="Chapters" /> : null}
                 {mainRows.map((r) =>
-                  r.t === "grp" ? groupRow(r) : chapterRow(r.ch, r.book),
+                  r.t === "grp" ? (
+                    <GroupRow
+                      key={`g-${r.book.id}-${r.major}`}
+                      group={r}
+                      savedIds={saved}
+                    />
+                  ) : (
+                    <ChapterRow
+                      key={String(r.ch.id)}
+                      ch={r.ch}
+                      book={r.book}
+                      saved={saved.has(String(r.ch.id))}
+                      size={sizes[String(r.ch.id)]}
+                    />
+                  ),
                 )}
                 {extras.length ? <SectionLabel text="Exam & practice" /> : null}
-                {extras.map((ch) => chapterRow(ch, book))}
+                {extras.map((ch) => (
+                  <ChapterRow
+                    key={String(ch.id)}
+                    ch={ch}
+                    book={book}
+                    saved={saved.has(String(ch.id))}
+                    size={sizes[String(ch.id)]}
+                  />
+                ))}
               </>
             )}
           </div>
@@ -315,215 +268,4 @@ export function Book() {
       )}
     </div>
   );
-
-  /* bare part row for the /part/:major view — number, progress, state */
-  function partRow(ch: Chapter) {
-    const id = String(ch.id);
-    const st = DL.stateOf(id);
-    const isSaved = saved.has(id);
-    const isDownloading = st?.status === "downloading";
-    const isQueued = st?.status === "queued";
-    const isError = st?.status === "error";
-    return (
-      <Card
-        key={id}
-        className={
-          "flex items-center gap-3 p-3 transition-colors " +
-          (isSaved || st?.status === "done"
-            ? "cursor-pointer hover:bg-muted/50"
-            : isError
-              ? "border-destructive/40"
-              : "")
-        }
-        onClick={() => {
-          if (isSaved || st?.status === "done") {
-            void navigate(`/read/${id}`);
-          } else if (!isDownloading && !isQueued) {
-            DL.enqueue(ch, book, { autoOpen: true });
-          }
-        }}
-      >
-        <span
-          className="flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 px-2 text-base font-bold tabular-nums text-primary"
-          aria-hidden="true"
-        >
-          {bnNum(String(ch.num ?? "·"))}
-        </span>
-        <div className="min-w-0 flex-1">
-          {isDownloading ? (
-            <Progress value={st?.pct ?? 0} className="h-1.5" />
-          ) : isError ? (
-            <span className="text-xs text-destructive">{st?.error}</span>
-          ) : isQueued ? (
-            <span className="text-xs text-muted-foreground">Queued…</span>
-          ) : null}
-        </div>
-        {isDownloading || isQueued ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Cancel download"
-            onClick={(e) => {
-              e.stopPropagation();
-              DL.cancel(id);
-            }}
-          >
-            <X className="size-4" aria-hidden="true" />
-          </Button>
-        ) : isSaved || st?.status === "done" ? (
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Check className="size-4" aria-hidden="true" />
-          </span>
-        ) : isError ? (
-          <span className="flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <RotateCcw className="size-4" aria-hidden="true" />
-          </span>
-        ) : (
-          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <Download className="size-4" aria-hidden="true" />
-          </span>
-        )}
-      </Card>
-    );
-  }
-
-  /* parent row for a split chapter — opens the parts list */
-  function groupRow(g: Extract<Row, { t: "grp" }>) {
-    const first = g.parts[0];
-    const word = first.label?.split(" ")[0] || "অধ্যায়";
-    const savedCount = g.parts.filter((p) => saved.has(String(p.id))).length;
-    return (
-      <Card
-        key={`g-${g.book.id}-${g.major}`}
-        className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-muted/50"
-        onClick={() => void navigate(`/book/${g.book.id}/part/${g.major}`)}
-      >
-        <span
-          className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
-          aria-hidden="true"
-        >
-          <span className="text-[11px] font-medium leading-none opacity-80">
-            {word}
-          </span>
-          <span className="text-base font-bold leading-tight">
-            {bnNum(String(g.major))}
-          </span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{parentTitle(g.parts)}</p>
-          {savedCount === g.parts.length ? (
-            <p className="text-xs text-muted-foreground">✓ Saved</p>
-          ) : null}
-        </div>
-        <ChevronRight
-          className="size-5 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      </Card>
-    );
-  }
-
-  function chapterRow(ch: Chapter, bk: Book) {
-    const id = String(ch.id);
-    const st = DL.stateOf(id);
-    const isSaved = saved.has(id);
-    const isDownloading = st?.status === "downloading";
-    const isQueued = st?.status === "queued";
-    const isError = st?.status === "error";
-    const raw = ch.display || ch.title || "Chapter";
-    const title = stripLeadNum(raw) || raw;
-    return (
-      <Card
-        key={id}
-        className={
-          "flex items-center gap-3 p-3 transition-colors " +
-          (isSaved || st?.status === "done"
-            ? "cursor-pointer hover:bg-muted/50"
-            : isError
-              ? "border-destructive/40"
-              : "")
-        }
-        onClick={() => {
-          if (isSaved || st?.status === "done") {
-            void navigate(`/read/${id}`);
-          } else if (!isDownloading && !isQueued) {
-            DL.enqueue(ch, bk, { autoOpen: true });
-          }
-        }}
-      >
-        <span
-          className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
-          aria-hidden="true"
-        >
-          {ch.label ? (
-            <>
-              <span className="text-[11px] font-medium leading-none opacity-80">
-                {ch.label.split(" ")[0]}
-              </span>
-              <span className="text-base font-bold leading-tight">
-                {bnNum(ch.label.split(" ").slice(1).join(" ")) || "·"}
-              </span>
-            </>
-          ) : (
-            <Sparkles className="size-4" aria-hidden="true" />
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{title}</p>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            {ch.pages ? (
-              <Badge
-                variant="outline"
-                className="gap-1 font-normal tabular-nums text-muted-foreground"
-              >
-                <FileText className="size-3" aria-hidden="true" />
-                Page {ch.pages[0]}–{ch.pages[1]}
-              </Badge>
-            ) : null}
-            {isDownloading ? (
-              <div className="flex w-full items-center gap-2">
-                <Progress value={st?.pct ?? 0} className="h-1.5 flex-1" />
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {st?.pct ?? 0}%
-                </span>
-              </div>
-            ) : isQueued ? (
-              <span className="text-xs text-muted-foreground">Queued…</span>
-            ) : isError ? (
-              <span className="text-xs text-destructive">{st?.error}</span>
-            ) : isSaved || st?.status === "done" ? (
-              <Badge variant="secondary">
-                ✓ Offline{sizes[id] ? ` · ${fmtMB(sizes[id])}` : ""}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-        {isDownloading || isQueued ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Cancel download"
-            onClick={(e) => {
-              e.stopPropagation();
-              DL.cancel(id);
-            }}
-          >
-            <X className="size-4" aria-hidden="true" />
-          </Button>
-        ) : isSaved || st?.status === "done" ? (
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Check className="size-4" aria-hidden="true" />
-          </span>
-        ) : isError ? (
-          <span className="flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <RotateCcw className="size-4" aria-hidden="true" />
-          </span>
-        ) : (
-          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <Download className="size-4" aria-hidden="true" />
-          </span>
-        )}
-      </Card>
-    );
-  }
 }

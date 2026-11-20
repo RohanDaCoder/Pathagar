@@ -1,65 +1,65 @@
-/* views/Branch.tsx — book list of one guide branch */
+/* views/Branch.tsx — the book grid of one guide branch, grouped by stream. */
 
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { ChevronLeft, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { catalog } from "@/catalog";
+import { DB } from "@/db";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import {
   isMcqBook,
   isTwin,
-  parseBookName,
   streamOf,
   STREAM_LABEL,
   type Stream,
 } from "@/lib/titles";
-import { DB } from "@/db";
-import { errMessage } from "@/lib/errors";
-import type { Book, ListResult } from "@/types";
+import type { Book } from "@/types";
+import { BookCard } from "./branch/BookCard";
+
+const NO_BOOKS: Book[] = []; // stable fallback identity (perf rule: no fresh arrays as props)
+
+const STREAM_ORDER: Stream[] = [
+  "compulsory",
+  "science",
+  "business",
+  "humanities",
+  "religion",
+  "extra",
+];
 
 export function Branch() {
   const { branchId = "" } = useParams();
   const id = Number.parseInt(branchId, 10);
-  const snap = catalog.snapshot;
-  const meta = snap.branches.find((b) => b.id === id);
+  const meta = catalog.snapshot.branches.find((b) => b.id === id);
   const label = meta?.label || "Guide";
 
-  const [data, setData] = useState<ListResult<Book> | null>(null);
-  const [error, setError] = useState<{ title: string; detail?: string } | null>(
-    null,
-  );
-  const [reload, setReload] = useState(0);
-  const [savedByBook, setSavedByBook] = useState<Record<string, number>>({});
+  const fetchList = useCallback(async () => {
+    const [books, metas] = await Promise.all([
+      catalog.getBooks(id),
+      DB.allMeta(),
+    ]);
+    const saved: Record<string, number> = {};
+    for (const m of metas) saved[m.bookId] = (saved[m.bookId] || 0) + 1;
+    return { books, saved };
+  }, [id]);
+  const { data, error, reload } = useAsyncData(fetchList);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [books, metas] = await Promise.all([
-          catalog.getBooks(id),
-          DB.allMeta(),
-        ]);
-        if (cancelled) return;
-        const saved: Record<string, number> = {};
-        for (const m of metas) saved[m.bookId] = (saved[m.bookId] || 0) + 1;
-        setSavedByBook(saved);
-        setData(books);
-      } catch (e) {
-        if (!cancelled)
-          setError({
-            title: "Couldn't load the book list",
-            detail: errMessage(e),
-          });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- reload is an intentional refetch trigger
-  }, [id, reload]);
+  const items = data?.books.items ?? NO_BOOKS;
+  const stale = data?.books.stale ?? false;
+
+  /* MCQ twins merge into their CQ book's chapter list — hide their cards */
+  const visible = items.filter((bk) => {
+    if (!isMcqBook(bk.name)) return true;
+    return !items.some((x) => String(x.id) !== String(bk.id) && isTwin(bk, x));
+  });
+  const groups = STREAM_ORDER.map((g) => ({
+    stream: g,
+    books: visible.filter((bk) => streamOf(bk.name) === g),
+  })).filter((g) => g.books.length > 0);
+  const single = groups.length === 1; // don't label a one-group branch
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6">
@@ -72,13 +72,9 @@ export function Branch() {
 
       {error ? (
         <ErrorState
-          title={error.title}
-          detail={error.detail}
-          onRetry={() => {
-            setData(null);
-            setError(null);
-            setReload((n) => n + 1);
-          }}
+          title="Couldn't load the book list"
+          detail={error}
+          onRetry={reload}
         />
       ) : !data ? (
         <div className="grid gap-3">
@@ -88,112 +84,52 @@ export function Branch() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {data.stale ? (
+          {stale ? (
             <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
               <WifiOff className="size-4 shrink-0" aria-hidden="true" />
               Offline — showing the saved list
             </Card>
           ) : null}
-          {data.items.length === 0 ? (
+          {items.length === 0 ? (
             <p className="py-10 text-center text-muted-foreground">
               No books in this branch.
             </p>
+          ) : single ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {groups[0].books.map((bk) => (
+                <BookCard
+                  key={bk.id}
+                  bk={bk}
+                  branchId={id}
+                  books={items}
+                  savedCount={data.saved[String(bk.id)] ?? 0}
+                />
+              ))}
+            </div>
           ) : (
-            renderGrouped()
+            <div className="grid gap-5">
+              {groups.map(({ stream, books }) => (
+                <section key={stream}>
+                  <h2 className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {STREAM_LABEL[stream]}
+                  </h2>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {books.map((bk) => (
+                      <BookCard
+                        key={bk.id}
+                        bk={bk}
+                        branchId={id}
+                        books={items}
+                        savedCount={data.saved[String(bk.id)] ?? 0}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           )}
         </div>
       )}
     </div>
   );
-
-  function bookCard(bk: Book): React.JSX.Element {
-    const bp = parseBookName(bk.name);
-    const twin = data?.items.find(
-      (x) => isTwin(bk, x) && String(x.id) !== String(bk.id),
-    );
-    return (
-      /* names are centred: the old avatar + chevron layout left short names
-         drifting off-centre to the left */
-      <Card
-        key={bk.id}
-        className="flex cursor-pointer flex-col items-center gap-1.5 p-4 text-center transition-colors hover:bg-muted/50"
-        onClick={() => {
-          catalog.rememberBook({ ...bk, branchId: id });
-          /* subjects that ship as MCQ + CQ uploads open the version chooser */
-          window.location.hash = twin
-            ? `#/book/${bk.id}/pick`
-            : `#/book/${bk.id}`;
-        }}
-      >
-        <p className="line-clamp-2 font-semibold leading-snug">{bp.name}</p>
-        <div className="flex flex-wrap items-center justify-center gap-1">
-          {twin ? <Badge variant="outline">MCQ / CQ</Badge> : null}
-          {/* the chooser badge already says MCQ / CQ — don't repeat the
-              variant tag the parser pulls out of the upload name */}
-          {(twin
-            ? bp.tags.filter((tg) => tg !== "MCQ" && tg !== "CQ")
-            : bp.tags
-          ).map((tg) => (
-            <Badge key={tg} variant="secondary">
-              {tg}
-            </Badge>
-          ))}
-          {savedByBook[String(bk.id)] ? (
-            <Badge variant="outline">
-              ✓ {savedByBook[String(bk.id)]} saved
-            </Badge>
-          ) : null}
-        </div>
-      </Card>
-    );
-  }
-
-  function renderGrouped() {
-    /* MCQ twins merge into their CQ book's chapter list — hide their cards */
-    const visible = data!.items.filter((bk) => {
-      if (!isMcqBook(bk.name)) return true;
-      return !data!.items.some(
-        (x) => String(x.id) !== String(bk.id) && isTwin(bk, x),
-      );
-    });
-    const byStream = new Map<Stream, Book[]>();
-    for (const g of [
-      "compulsory",
-      "science",
-      "business",
-      "humanities",
-      "religion",
-      "extra",
-    ] as Stream[])
-      byStream.set(
-        g,
-        visible.filter((bk) => streamOf(bk.name) === g),
-      );
-    const present = [...byStream.entries()].filter(([, v]) => v.length > 0);
-    const single = present.length === 1; // don't label a one-group branch
-
-    const only = single ? present[0] : undefined;
-    if (only) {
-      const [, books] = only;
-      return (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {books.map(bookCard)}
-        </div>
-      );
-    }
-    return (
-      <div className="grid gap-5">
-        {present.map(([g, books]) => (
-          <section key={g}>
-            <h2 className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {STREAM_LABEL[g]}
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {books.map(bookCard)}
-            </div>
-          </section>
-        ))}
-      </div>
-    );
-  }
 }
