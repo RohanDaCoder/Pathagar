@@ -1,0 +1,20 @@
+{
+  "name": "pathosongi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "পাঠসঙ্গী — Class 9-10 guide book reader (web + Android, single codebase)",
+  "scripts": {
+    "serve": "python3 ../scripts/local_proxy.py",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:run": "npx cap run android",
+    "build:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.1"
+  }
+}

@@ -1,0 +1,33 @@
+# পাঠসঙ্গী (PathoSongi) — Netlify configuration
+# The web app is the same `www/` folder that the Android app wraps.
+
+[build]
+  publish = "www"
+
+# PDF reverse proxy.
+# The guide-book PDF host (pdf.tetashweb.xyz) does NOT send CORS headers, so the
+# browser cannot fetch PDF bytes directly from it. This redirect makes the PDFs
+# same-origin under your Netlify domain: /pdf/<path> -> https://pdf.tetashweb.xyz/<path>
+# The API host (books.tetashweb.xyz) already sends Access-Control-Allow-Origin: *,
+# so it is called directly and needs no proxy.
+[[redirects]]
+  from = "/pdf/*"
+  to = "https://pdf.tetashweb.xyz/:splat"
+  status = 200
+  force = true
+
+# PWA: never cache the manifest itself, and SPA fallback to index.html
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"
