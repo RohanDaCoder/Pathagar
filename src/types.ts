@@ -72,15 +72,6 @@ export interface DlState {
   speed?: number;
 }
 
-export interface UpdateInfo {
-  current: string;
-  latest: string;
-  apkUrl: string;
-  htmlUrl: string;
-  notes: string;
-  skipped: boolean;
-}
-
 export interface BookCtx {
   id: string;
   name: string;

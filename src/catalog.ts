@@ -6,7 +6,7 @@
    turns the API's ~12 ad-hoc upload formats into one clean, ordered contract. */
 import { S } from "./config";
 import { apiGet } from "./net";
-import { compareChapters, parseTitle } from "./lib/titles";
+import { compareChapters, parseTitle, withMathNames } from "./lib/titles";
 import type { Book, Chapter, ListResult, Snapshot } from "./types";
 import snapshotJson from "./catalog-snapshot.json";
 
@@ -44,6 +44,14 @@ const catCache = {
     }
   },
 };
+
+function bookNameOf(bookId: number | string): string {
+  for (const b of loadSnapshot().branches) {
+    const bk = b.books.find((x) => String(x.id) === String(bookId));
+    if (bk) return bk.name;
+  }
+  return "";
+}
 
 /* snapshot books may carry a parsed chapter list (scripts/make-snapshot.ts) */
 function isChapterLike(x: unknown): x is Chapter {
@@ -91,10 +99,11 @@ export async function getBooks(
 
 /* Enrich raw API chapters with the parsed contract and order them for
    display (front matter, numbered chapters ascending, extras last). */
-function normalizeChapters(items: Chapter[]): Chapter[] {
+function normalizeChapters(items: Chapter[], bookName = ""): Chapter[] {
   const enriched: Chapter[] = items.map((ch) => {
-    if (ch.display) return ch; // already parsed (cache from a newer build)
-    const p = parseTitle(ch.title);
+    // re-parse when unparsed, or when an older cache stored a nameless title
+    if (ch.display && ch.display !== ch.label) return ch;
+    const p = withMathNames(bookName, parseTitle(ch.title));
     const pages: [number, number] | null = p.pageStart
       ? [p.pageStart, p.pageEnd ?? p.pageStart]
       : null;
@@ -139,11 +148,15 @@ export async function getChapters(
     }
     // The API returns rows newest-first (by id); the parser adapter decides the
     // real book order from the titles themselves — no blanket reverse.
-    const sorted = normalizeChapters(items);
+    const sorted = normalizeChapters(items, bookNameOf(bookId));
     catCache.set(`chaps:${bookId}`, sorted);
     return { items: sorted, stale: false };
   } catch (e) {
-    if (cached) return { items: normalizeChapters(cached.v), stale: true };
+    if (cached)
+      return {
+        items: normalizeChapters(cached.v, bookNameOf(bookId)),
+        stale: true,
+      };
     const snap = loadSnapshot();
     for (const b of snap.branches) {
       const bk = b.books.find((x) => String(x.id) === String(bookId));

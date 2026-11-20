@@ -25,6 +25,7 @@ import {
   useDownloadsOpen,
 } from "@/components/DownloadsPopup";
 import { Button } from "@/components/ui/button";
+import { DL } from "@/dlqueue";
 import { Home } from "@/views/Home";
 import { Branch } from "@/views/Branch";
 import { Book } from "@/views/Book";
@@ -108,6 +109,22 @@ function Shell() {
   const isReader = location.pathname.startsWith("/read");
   const hasLast = Boolean(localStorage.getItem("ptg:lastRead"));
   const [dlOpen, setDlOpen] = useDownloadsOpen();
+
+  /* the downloads popup opens itself when a download is launched … */
+  useEffect(() => {
+    DL.onEnqueue = () => setDlOpen(true);
+    return () => {
+      DL.onEnqueue = null;
+    };
+  }, [setDlOpen]);
+  /* … and closes when a chapter opens in the reader (auto-open flow) */
+  useEffect(() => {
+    const close = () => {
+      if (window.location.hash.startsWith("#/read/")) setDlOpen(false);
+    };
+    window.addEventListener("hashchange", close);
+    return () => window.removeEventListener("hashchange", close);
+  }, [setDlOpen]);
 
   return (
     <div className="min-h-svh bg-background text-foreground">

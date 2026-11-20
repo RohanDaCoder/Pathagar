@@ -6,6 +6,8 @@ import {
   parseBookName,
   parseTitle,
   sortParsed,
+  streamOf,
+  withMathNames,
 } from "./titles";
 
 describe("parseTitle — numbered formats", () => {
@@ -176,5 +178,60 @@ describe("parseBookName", () => {
       name: "বাংলা ১ম পত্র গাইড",
       tags: ["SSC 2028"],
     });
+  });
+});
+
+describe("withMathNames — SSC-2028 গণিত guides upload nameless titles", () => {
+  test("অধ্যায় - 2.1 gets the official NCTB chapter name", () => {
+    const p = withMathNames(
+      "গণিত গাইড CQ (SSC 2028)",
+      parseTitle("অধ্যায় - 2.1"),
+    );
+    expect(p.display).toBe("২. সেট ও ফাংশন — অংশ ১");
+    expect(p.number).toBe(2.1);
+  });
+
+  test("whole chapters keep their number out of the sub-part form", () => {
+    const p = withMathNames(
+      "গণিত গাইড MCQ (SSC 2028)",
+      parseTitle("MCQ - অধ্যায় - 10"),
+    );
+    expect(p.display).toBe("১০. দূরত্ব ও উচ্চতা");
+  });
+
+  test("books with real names are untouched", () => {
+    const raw = "1. সেট ও ফাংশন (অধ্যায় ১) (Pages-3-62)";
+    const p = withMathNames("উচ্চতর গণিত গাইড CQ (SSC 2028)", parseTitle(raw));
+    expect(p.display).toContain("সেট ও ফাংশন");
+  });
+});
+
+describe("streamOf — academic stream grouping", () => {
+  test("science subjects", () => {
+    expect(streamOf("পদার্থবিজ্ঞান গাইড MCQ (SSC 2028)")).toBe("science");
+    expect(streamOf("উচ্চতর গণিত গাইড CQ (SSC 2028)")).toBe("science");
+    expect(streamOf("Physics Guide")).toBe("science");
+  });
+
+  test("business subjects (general science belongs to non-scance groups per SSC)", () => {
+    expect(streamOf("ফিন্যান্স ও ব্যাংকিং গাইড (SSC 2028)")).toBe("business");
+    expect(streamOf("হিসাববিজ্ঞান গাইড MCQ (SSC 2028)")).toBe("business");
+    expect(streamOf("ব্যবসায়য় উদ্যোগ গাইড (SSC 2028)")).toBe("business");
+    expect(streamOf("বিজ্ঞান গাইড বই (SSC 2028)")).toBe("business");
+  });
+
+  test("humanities subjects", () => {
+    expect(streamOf("অর্থনীতি গাইড বই (SSC 2028)")).toBe("humanities");
+    expect(streamOf("বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা গাইড (SSC 2028)")).toBe(
+      "humanities",
+    );
+    expect(streamOf("ভূগোল ও পরিবেশ গাইড (SSC 2028)")).toBe("humanities");
+    expect(streamOf("পৌরনীতি ও নাগরিকতা গাইড (SSC 2028)")).toBe("humanities");
+  });
+
+  test("everything else is compulsory", () => {
+    expect(streamOf("বাংলা ১ম পত্র গাইড (SSC 2028)")).toBe("compulsory");
+    expect(streamOf("তথ্য ও যোগাযোগ প্রযুক্তি (SSC 2028)")).toBe("compulsory");
+    expect(streamOf("গার্হস্থ্যবিজ্ঞান গাইড (SSC 2028)")).toBe("compulsory");
   });
 });

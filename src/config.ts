@@ -5,25 +5,18 @@
    app at a different backend or host. They used to live in the Settings UI;
    they are code constants now (non-technical users can no longer break the
    app, and the values travel with the repo when we port it). */
-import { Capacitor } from "@capacitor/core";
 import type { BookCtx, DlState, Snapshot } from "./types";
 
-export const NATIVE = Capacitor.isNativePlatform();
 export const APP_NAME = "Pathagar";
-export const APP_VERSION = "1.3.0";
-export const REPO = "RohanDaCoder/Pathagar"; // releases feed the in-app updater
+export const APP_VERSION = "1.4.0";
 
 /** The original app's Laravel backend (Stage-1 report). */
 export const API_URL = "https://books.tetashweb.xyz/api/v1/app/";
 /** Hardcoded app key the original APK ships with (403 without it). */
 export const API_KEY =
   "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3";
-/**
- * Web PDF reverse proxy path. The PDF host sends no CORS headers, so the
- * browser fetches PDFs same-origin through a proxy that forwards to
- * pdf.tetashweb.xyz (netlify.toml / public/_redirects). The native app talks
- * to the PDF host directly (no CORS in native HTTP), so this is web-only.
- */
+/** Web PDF reverse proxy path: netlify.toml / public/_redirects forward
+ * /pdf/* to pdf.tetashweb.xyz (the PDF host sends no CORS headers). */
 export const PDF_PROXY_PREFIX = "/pdf/";
 /** Chapters downloaded at the same time. */
 export const DL_CONCURRENCY = 2;

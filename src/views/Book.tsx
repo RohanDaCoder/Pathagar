@@ -9,6 +9,7 @@ import {
   Check,
   ChevronLeft,
   Download,
+  FileText,
   RotateCcw,
   Sparkles,
   WifiOff,
@@ -277,9 +278,13 @@ export function Book() {
           <p className="truncate text-sm font-medium">{title}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {ch.pages ? (
-              <span className="text-xs tabular-nums text-muted-foreground">
-                pp. {ch.pages[0]}–{ch.pages[1]}
-              </span>
+              <Badge
+                variant="outline"
+                className="gap-1 font-normal tabular-nums text-muted-foreground"
+              >
+                <FileText className="size-3" aria-hidden="true" />
+                Page {ch.pages[0]}–{ch.pages[1]}
+              </Badge>
             ) : null}
             {isDownloading ? (
               <div className="flex w-full items-center gap-2">

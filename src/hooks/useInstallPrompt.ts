@@ -6,7 +6,6 @@
    confirmed (never a dead button). */
 
 import { useCallback, useEffect, useState } from "react";
-import { NATIVE } from "@/config";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -32,7 +31,6 @@ export function useInstallPrompt(onSuggest?: () => void): InstallState {
   );
 
   useEffect(() => {
-    if (NATIVE) return undefined;
     const onBip = (e: Event) => {
       e.preventDefault();
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- browser event boundary (not in lib.dom)

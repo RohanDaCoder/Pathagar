@@ -1,8 +1,7 @@
 /* vite.config.ts — build/dev config
-   - dev server proxies /pdf/* to the guide PDF host (replaces the old Python proxy)
-   - VITE_BASE builds a Pages-flavoured bundle (GitHub Pages serves under /Pathagar/)
-   - vite-plugin-pwa generates the service worker (precache + API network-first),
-     replacing the hand-maintained sw.js + its CI coverage check */
+   - dev server proxies /pdf/* to the guide PDF host (same shape as the
+     Netlify /pdf/* production proxy)
+   - vite-plugin-pwa generates the service worker (precache + API network-first) */
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -11,7 +10,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const PDF_UPSTREAM = "https://pdf.tetashweb.xyz";
 const API_ORIGIN = "https://books.tetashweb.xyz";
-const base = process.env.VITE_BASE ?? "/";
+const base = "/";
 
 const pdfProxy = {
   target: PDF_UPSTREAM,
