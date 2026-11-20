@@ -37,7 +37,7 @@ import { DL } from "@/dlqueue";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
 import { errMessage } from "@/lib/errors";
-import { parseBookName, stripLeadNum, toBn } from "@/lib/titles";
+import { bnNum, parseBookName, stripLeadNum } from "@/lib/titles";
 import type { Book, Chapter, ListResult } from "@/types";
 
 function SectionLabel({ text }: { text: string }) {
@@ -88,7 +88,7 @@ function buildRows(chs: Chapter[], bk: Book): Row[] {
 function parentTitle(parts: Chapter[]): string {
   const d = parts[0]?.display || "";
   const stripped = stripLeadNum(d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim());
-  return stripped || parts[0]?.label || "Chapter";
+  return stripped || bnNum(parts[0]?.label || "") || "Chapter";
 }
 
 export function Book() {
@@ -216,7 +216,7 @@ export function Book() {
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6">
       {backLink}
       <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold">
-        {majorNum !== null ? `অধ্যায় ${toBn(majorNum)}` : bp.name}
+        {majorNum !== null ? `অধ্যায় ${bnNum(String(majorNum))}` : bp.name}
         {majorNum === null && bp.tags.length
           ? bp.tags.map((tg) => (
               <Badge key={tg} variant="secondary">
@@ -359,7 +359,7 @@ export function Book() {
           className="flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 px-2 text-base font-bold tabular-nums text-primary"
           aria-hidden="true"
         >
-          {toBn(ch.num ?? "·")}
+          {bnNum(String(ch.num ?? "·"))}
         </span>
         <div className="min-w-0 flex-1">
           {isDownloading ? (
@@ -418,7 +418,7 @@ export function Book() {
             {word}
           </span>
           <span className="text-base font-bold leading-tight">
-            {toBn(g.major)}
+            {bnNum(String(g.major))}
           </span>
         </span>
         <div className="min-w-0 flex-1">
@@ -473,7 +473,7 @@ export function Book() {
                 {ch.label.split(" ")[0]}
               </span>
               <span className="text-base font-bold leading-tight">
-                {ch.label.split(" ").slice(1).join(" ") || "·"}
+                {bnNum(ch.label.split(" ").slice(1).join(" ")) || "·"}
               </span>
             </>
           ) : (

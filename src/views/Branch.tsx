@@ -132,12 +132,14 @@ export function Branch() {
         }}
       >
         <p className="line-clamp-2 font-semibold leading-snug">{bp.name}</p>
-        <p className="text-sm text-muted-foreground">
-          {meta?.books.find((x) => x.id === bk.id)?.chapters ?? "…"} chapters
-        </p>
         <div className="flex flex-wrap items-center justify-center gap-1">
           {twin ? <Badge variant="outline">MCQ / CQ</Badge> : null}
-          {bp.tags.map((tg) => (
+          {/* the chooser badge already says MCQ / CQ — don't repeat the
+              variant tag the parser pulls out of the upload name */}
+          {(twin
+            ? bp.tags.filter((tg) => tg !== "MCQ" && tg !== "CQ")
+            : bp.tags
+          ).map((tg) => (
             <Badge key={tg} variant="secondary">
               {tg}
             </Badge>
