@@ -72,7 +72,7 @@ async function nativeDownload(url, onProgress, isCancelled) {
       });
       if (r.status >= 400) throw new ApiError(r.status);
       const u8 = toU8(r.data);
-      if (!u8) throw new Error('অপ্রত্যাশিত ডেটা ফরম্যাট');
+      if (!u8) throw new Error('Unexpected data format');
       parts.push(u8); got += u8.byteLength;
       onProgress(got, total);
     }
@@ -82,7 +82,7 @@ async function nativeDownload(url, onProgress, isCancelled) {
   const r = await CapacitorHttp.request({ method: 'GET', url, responseType: 'arraybuffer' });
   if (r.status >= 400) throw new ApiError(r.status);
   const u8 = toU8(r.data);
-  if (!u8) throw new Error('অপ্রত্যাশিত ডেটা ফরম্যাট');
+  if (!u8) throw new Error('Unexpected data format');
   onProgress(u8.byteLength, u8.byteLength);
   return u8;
 }

@@ -1,8 +1,8 @@
 {
-  "name": "পাঠাগার — ক্লাস ৯-১০ গাইড",
-  "short_name": "পাঠাগার",
-  "description": "ক্লাস ৯-১০ এর গাইড বই অধ্যায়বিভাগে ডাউনলোড করে অফলাইনে পড়ুন।",
-  "lang": "bn",
+  "name": "Pathagar — Class 9-10 Guide",
+  "short_name": "Pathagar",
+  "description": "Download Class 9-10 guide book chapters and read them offline.",
+  "lang": "en",
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",

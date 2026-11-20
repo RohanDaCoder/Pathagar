@@ -2,8 +2,8 @@
 import { Capacitor } from '../vendor/capacitor/capacitor-core.js';
 
 export const NATIVE = Capacitor.isNativePlatform();
-export const APP_NAME = 'পাঠাগার';
-export const APP_VERSION = '1.0.0';
+export const APP_NAME = 'Pathagar';
+export const APP_VERSION = '1.0.1';
 export const REPO = 'RohanDaCoder/Pathagar'; // releases feed the in-app updater
 
 export const DEFAULT_SETTINGS = {

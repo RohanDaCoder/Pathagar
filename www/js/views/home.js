@@ -18,21 +18,21 @@ export async function renderHome() {
     <div class="banner info" id="updbanner" style="align-items:center">
       ${svgUpdate}
       <div style="flex:1;min-width:0">
-        <b>নতুন ভার্সন v${bn(upd.latest)}</b> এসেছে।
-        <div style="font-size:.75rem;opacity:.85">বর্তমান: v${bn(upd.current)} — আপডেটটি ডাউনলোড করে ইনস্টল করুন।</div>
+        <b>New version v${bn(upd.latest)}</b> is available.
+        <div style="font-size:.75rem;opacity:.85">Current: v${bn(upd.current)} — download and install the update.</div>
       </div>
-      <button class="btn sm" id="upd-dl">ডাউনলোড</button>
-      <button class="btn ghost sm" id="upd-skip">পরে</button>
+      <button class="btn sm" id="upd-dl">Download</button>
+      <button class="btn ghost sm" id="upd-skip">Later</button>
     </div>` : '';
 
   $('#view').innerHTML = `<div class="page">
     ${banner}
-    ${viewHead(APP_NAME, 'ক্লাস ৯-১০ গাইড বই · অফলাইন লাইব্রেরি', true)}
+    ${viewHead(APP_NAME, 'Class 9-10 guide books · offline library', true)}
     ${metas.length ? `
     <div class="card quick-card" data-go="#/library">
       <div class="qicon">${svgLibrary}</div>
-      <div><div class="qtitle">আমার লাইব্রেরি</div>
-      <div class="qsub">${bn(metas.length)} অধ্যায় · ${fmtMB(totalMB)}</div></div>
+      <div><div class="qtitle">My Library</div>
+      <div class="qsub">${bn(metas.length)} chapters · ${fmtMB(totalMB)}</div></div>
       ${svgChev}
     </div>` : ''}
     <div class="branch-grid">
@@ -41,14 +41,14 @@ export async function renderHome() {
           <div class="bicon ${BRANCH_BG[b.id] || 'bg-1'}">${BRANCH_ICONS[b.id] || svgBookIco}</div>
           <div style="min-width:0">
             <h3>${esc(b.label.replace(/\s*\(.*?\)\s*$/, ''))}</h3>
-            <div class="meta">${bn(b.books.length)} বই · ${bn(b.total_chapters)} অধ্যায়</div>
-            ${savedByBranch[b.id] ? `<div style="margin-top:4px"><span class="chip ok">✓ ${bn(savedByBranch[b.id])} অধ্যায় সেভ</span></div>` : ''}
+            <div class="meta">${bn(b.books.length)} books · ${bn(b.total_chapters)} chapters</div>
+            ${savedByBranch[b.id] ? `<div style="margin-top:4px"><span class="chip ok">✓ ${bn(savedByBranch[b.id])} saved</span></div>` : ''}
           </div>
           ${svgChev}
         </div>`).join('')}
     </div>
-    <div class="footnote">${APP_NAME} v${bn(APP_VERSION)} — অধ্যায় ডাউনলোড করে ইন্টারনেট ছাড়াই পড়ুন।<br>
-    সূত্র: Class 9 All Subject Books অ্যাপের ওপেন ক্যাটালগ (শিক্ষার্থীদের ব্যক্তিগত ব্যবহারের জন্য)।</div>
+    <div class="footnote">${APP_NAME} v${bn(APP_VERSION)} — download chapters and read them without internet.<br>
+    Source: open catalog of the "Class 9 All Subject Books" app (for students' personal use).</div>
   </div>`;
 
   if (upd && !upd.skipped) {

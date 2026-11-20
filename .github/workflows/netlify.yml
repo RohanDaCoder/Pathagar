@@ -2,7 +2,7 @@ name: Deploy Web (Netlify)
 
 # Optional: deploys www/ to Netlify on every push to main.
 # No-op until the orchestrator sets the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID
-# repo secrets (README → "ওয়েব ডিপ্লয়" section explains how).
+# repo secrets (README → "Web deploy" section explains how).
 on:
   push:
     branches: [main]
@@ -20,7 +20,7 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
-            echo "::notice::Netlify secrets not set (NETLIFY_AUTH_TOKEN / NETLIFY_SITE_ID) — skipping web deploy. See README → ওয়েব ডিপ্লয়।"
+            echo "::notice::Netlify secrets not set (NETLIFY_AUTH_TOKEN / NETLIFY_SITE_ID) — skipping web deploy. See README → Web deploy."
             exit 0
           fi
           npx --yes netlify-cli deploy --dir=www --prod

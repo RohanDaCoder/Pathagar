@@ -14,27 +14,27 @@ export function chapterRowHtml(i, ch, book) {
   const id = String(ch.id);
   const st = S.dl.get(id);
   const saved = BookPage?.saved?.has(id);
-  let right = `<button class="chbtn" data-act="dl" aria-label="ডাউনলোড">${svgDownload}</button>`;
+  let right = `<button class="chbtn" data-act="dl" aria-label="Download">${svgDownload}</button>`;
   let cls = 'row', sub = '';
   if (st?.status === 'downloading') {
     cls += ' dl-active';
-    right = `<button class="pct" data-act="cancel" title="বাতিল করুন">${bn(st.pct)}%</button>`;
+    right = `<button class="pct" data-act="cancel" title="Cancel">${bn(st.pct)}%</button>`;
     sub = `<div class="minibar"><i style="width:${st.pct}%"></i></div>`;
   } else if (st?.status === 'queued') {
-    right = `<button class="pct" data-act="cancel" title="বাতিল করুন">…</button>`;
+    right = `<button class="pct" data-act="cancel" title="Cancel">…</button>`;
   } else if (st?.status === 'error') {
     cls += ' dl-error';
-    right = `<button class="chbtn err" data-act="dl" aria-label="আবার চেষ্টা">${svgRetry}</button>`;
-    sub = `<span style="color:var(--danger);font-size:.75rem">${esc(st.error || 'ব্যর্থ')}</span>`;
+    right = `<button class="chbtn err" data-act="dl" aria-label="Retry">${svgRetry}</button>`;
+    sub = `<span style="color:var(--danger);font-size:.75rem">${esc(st.error || 'Failed')}</span>`;
   } else if (saved) {
     cls += ' done';
-    right = `<button class="chbtn ok" data-act="read" aria-label="পড়ুন">${svgCheck}</button>`;
+    right = `<button class="chbtn ok" data-act="read" aria-label="Read">${svgCheck}</button>`;
     const size = BookPage?.sizes?.[id];
-    sub = `<span class="chip ok">অফলাইন${size ? ' · ' + fmtMB(size) : ''}</span>`;
+    sub = `<span class="chip ok">Offline${size ? ' · ' + fmtMB(size) : ''}</span>`;
   }
   return `<div class="${cls}" data-ch="${id}" data-i="${i}">
     <div class="chno">${bn(i + 1)}</div>
-    <div class="rmain"><div class="rtitle">${esc(ch.title || 'অধ্যায়')}${sub}</div></div>
+    <div class="rmain"><div class="rtitle">${esc(ch.title || 'Chapter')}${sub}</div></div>
     ${right}</div>`;
 }
 
@@ -54,7 +54,7 @@ function paintBookToolbar(book) {
   bar.innerHTML = `<i class="${errs && !active ? 'err' : ''}" style="width:${pct}%"></i>`;
   bar.dataset.done = done; bar.dataset.total = total;
   if (btn) {
-    btn.innerHTML = done >= total && total ? svgCheck + ' সম্পূর্ণ' : svgDownload + ` সব ডাউনলোড (${bn(done)}/${bn(total)})`;
+    btn.innerHTML = done >= total && total ? svgCheck + ' Done' : svgDownload + ` Download all (${bn(done)}/${bn(total)})`;
     btn.disabled = done >= total && total;
   }
 }
@@ -104,30 +104,30 @@ export async function renderBook(bookId) {
   }
   const branchLabel = snap.branches.find(b => b.id === branchId)?.label || '';
   $('#view').innerHTML = `<div class="page">
-    ${viewHead(bookName || 'বই', branchLabel)}
+    ${viewHead(bookName || 'Book', branchLabel)}
     ${crumbs(branchLabel)}
     <div class="toolbar">
       <div class="bigbar" id="bookbar"><i style="width:0"></i></div>
-      <button class="btn sm" id="dlallbtn">${svgDownload} সব ডাউনলোড</button>
+      <button class="btn sm" id="dlallbtn">${svgDownload} Download all</button>
     </div>
     <div class="list" id="rows"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   </div>`;
   let data;
   try { data = await getChapters(bookId); } catch (e) {
-    $('#rows').innerHTML = `<div class="empty">${svgWarn}<div class="t">অধ্যায় তালিকা আনা যায়নি</div>
-      <div>${e.status === 403 ? 'API কী বাতিল — সেটিংসে নতুন কী দিন।' : esc(e.message || 'নেটওয়ার্ক সমস্যা')}</div></div>`;
+    $('#rows').innerHTML = `<div class="empty">${svgWarn}<div class="t">Couldn't load the chapter list</div>
+      <div>${e.status === 403 ? 'API key revoked — set a new one in Settings.' : esc(e.message || 'Network problem')}</div></div>`;
     return;
   }
   const metas = (await DB.allMeta()).filter(m => m.bookId === String(bookId));
   BookPage = {
-    book: { id: String(bookId), name: bookName || 'বই', branchId },
+    book: { id: String(bookId), name: bookName || 'Book', branchId },
     chapters: data.items,
     saved: new Set(metas.map(m => m.id)),
     sizes: Object.fromEntries(metas.map(m => [m.id, m.size || 0])),
   };
-  $('#rows').innerHTML = (data.stale ? `<div class="banner warn">${svgOffline} অফলাইন — সংরক্ষিত তালিকা</div>` : '') +
+  $('#rows').innerHTML = (data.stale ? `<div class="banner warn">${svgOffline} Offline — saved list</div>` : '') +
     (data.items.length ? data.items.map((ch, i) => chapterRowHtml(i, ch, BookPage.book)).join('')
-      : `<div class="empty">${svgPdf}<div class="t">এই বইয়ের কোনো অধ্যায় পাওয়া যায়নি</div></div>`);
+      : `<div class="empty">${svgPdf}<div class="t">No chapters found for this book</div></div>`);
   paintBookToolbar(BookPage.book);
 
   $$('#rows .row[data-ch]').forEach((row) => {
@@ -140,6 +140,6 @@ export async function renderBook(bookId) {
       const id = String(ch.id);
       if (!BookPage.saved.has(id) && !S.dl.has(id)) { DL.enqueue(ch, BookPage.book); n++; }
     }
-    if (n) toast(`${bn(n)} অধ্যায় ডাউনলোড শুরু হয়েছে`);
+    if (n) toast(`Started downloading ${bn(n)} chapters`);
   };
 }

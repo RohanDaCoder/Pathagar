@@ -66,7 +66,7 @@ export const DL = {
         },
       });
       await DB.putFile(id, buf, {
-        id, title: chapter.title || 'অধ্যায়',
+        id, title: chapter.title || 'Chapter',
         bookId: String(book.id), bookName: book.name, branchId: String(book.branchId || ''),
         url: chapter.pdf, size: buf.byteLength, addedAt: Date.now(), lastOpened: 0,
       });
@@ -76,7 +76,7 @@ export const DL = {
       if (S.autoOpen.has(id)) { S.autoOpen.delete(id); this.openChapter?.(id); }
     } catch (e) {
       if (e?.name === 'AbortError' || st.cancelled) { S.dl.delete(id); }
-      else { st.status = 'error'; st.error = e?.status === 403 ? 'কী পরিবর্তন হয়েছে? (403)' : (e.message || 'ব্যর্থ'); }
+      else { st.status = 'error'; st.error = e?.status === 403 ? 'Key changed? (403)' : (e.message || 'Failed'); }
       this.onRowUpdate?.(id);
     }
   },

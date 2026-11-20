@@ -1,4 +1,4 @@
-# পাঠসঙ্গী (PathoSongi) — Netlify configuration
+# Pathagar — Netlify configuration
 # The web app is the same `www/` folder that the Android app wraps.
 
 [build]

@@ -1,5 +1,5 @@
-/* পাঠাগার service worker — app shell precache + API network-first */
-const VERSION = 'ptg-v1.0.0';
+/* Pathagar service worker — app shell precache + API network-first */
+const VERSION = 'ptg-v1.0.1';
 const PRECACHE = [
   './', 'index.html', 'manifest.webmanifest', 'catalog-snapshot.json',
   'css/app.css',
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (e) => {
         const shell = await caches.match('index.html');
         if (shell) return shell;
       }
-      return new Response('অফলাইন', { status: 503 });
+      return new Response('Offline', { status: 503 });
     })());
   }
 });

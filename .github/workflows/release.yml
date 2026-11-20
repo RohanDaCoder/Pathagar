@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            --title "পাঠাগার (Pathagar) v${VERSION_NAME}" \
+            --title "Pathagar v${VERSION_NAME}" \
             --generate-notes \
             "Pathagar-v${VERSION_NAME}.apk" \
             "pathagar-web-v${VERSION_NAME}.zip"
