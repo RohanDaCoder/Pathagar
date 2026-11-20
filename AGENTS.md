@@ -93,11 +93,14 @@ bun check && bun fmt --check && bun lint && bun test && bun run build
 ## Workflows (all bun-based, all cached)
 
 - **CI** (PR + push main): `bun check` · `bun fmt --check` · `bun lint` ·
-  `bun test` · `bun run build` (+ dist artifact), and an Android debug APK job
-  (gradle cache via `actions/cache`; bun cache via `setup-bun`).
-- **Release** (tag `vX.Y.Z`): builds web + signed APK (keystore from repo
-  secrets), publishes the GitHub Release. `versionCode` = major·10000 +
-  minor·100 + patch. Tag titles are English.
+  `bun test` · `bun run build` (+ dist artifact), and an Android debug APK job.
+  All jobs: least-privilege `permissions`, SHA-pinned actions (Dependabot bumps
+  them weekly via `.github/dependabot.yml`), `persist-credentials: false`,
+  timeouts, concurrency cancellation, and caches (bun installs + gradle).
+- **Release** (tag `vX.Y.Z`): builds the signed APK (keystore from repo
+  secrets) and publishes the GitHub Release — APK only; the web bundle is
+  deployed by the Netlify/Pages workflows on main, so no zip is attached.
+  `versionCode` = major·10000 + minor·100 + patch. Tag titles are English.
 - **Netlify** (push main): deploys `dist/` via the official
   `netlify/actions/cli@master`. If the `NETLIFY_AUTH_TOKEN` / `NETLIFY_SITE_ID`
   secrets are missing, the deploy job shows as **skipped** (gray) — never green

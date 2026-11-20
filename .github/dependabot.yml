@@ -1,0 +1,11 @@
+# Dependabot keeps the SHA-pinned actions in .github/workflows/ current:
+# it understands the `# vX.Y.Z` comments and bumps the SHAs as reviewable PRs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

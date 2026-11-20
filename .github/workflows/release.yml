@@ -1,34 +1,48 @@
 name: Release
 
-# Tag-based releases: push a tag `vX.Y.Z` -> signed APK + web bundle on GitHub Releases.
+# Tag-based releases: push a tag `vX.Y.Z` -> signed APK on GitHub Releases.
 # versionCode = major*10000 + minor*100 + patch (set on the release APK).
 # The in-app updater reads the "latest" release of this repo.
+# (The web bundle is deployed by the Netlify and Pages workflows on main —
+# a zipped copy is no longer attached here.)
 on:
   push:
     tags: ["v*"]
 
+# Least privilege by default; only the release job writes (gh release create).
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
     name: Build & publish release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # create the GitHub Release
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.4.5 # cache: enabled by default, keyed on bun.lock
-      - uses: actions/setup-java@v4
+          persist-credentials: false
+          fetch-depth: 1
+      # bun 1.4.6 line (built-in linter) — canaries are npm-only, see ci.yml
+      - run: npm install -g bun@1.4.5-canary.20261119.1
+      - name: Cache bun installs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-install-${{ runner.os }}-
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: platform-tools # legacy 'tools' package was removed from the SDK repo
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
@@ -66,9 +80,6 @@ jobs:
       - name: Stage APK with release name
         run: cp android/app/build/outputs/apk/release/app-release.apk "Pathagar-v${VERSION_NAME}.apk"
 
-      - name: Package web bundle
-        run: cd dist && zip -rq "../pathagar-web-v${VERSION_NAME}.zip" .
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,5 +87,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "Pathagar v${VERSION_NAME}" \
             --generate-notes \
-            "Pathagar-v${VERSION_NAME}.apk" \
-            "pathagar-web-v${VERSION_NAME}.zip"
+            "Pathagar-v${VERSION_NAME}.apk"
