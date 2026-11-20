@@ -367,7 +367,9 @@ export interface ParsedBook {
 export function parseBookName(raw: string): ParsedBook {
   const tags: string[] = [];
   let name = nz(raw.trim());
-  const m = name.match(/\((SSC\s*\d{4})\)\s*$/);
+  // SSC year tag — normally "(SSC 2028)"; one 2028 upload (ইংরেজি ১ম পত্র)
+  // spells the year bare at the end, so accept both spellings
+  const m = name.match(/\(?\s*(SSC\s*\d{4})\s*\)?\s*$/i);
   if (m) {
     tags.push(m[1].replace(/\s+/g, " ").toUpperCase());
     name = name.replace(m[0], "").trim();
@@ -380,6 +382,7 @@ export function parseBookName(raw: string): ParsedBook {
   name = name
     .replace(/\s*গাইড\s*বই$/, "")
     .replace(/\s+বই$/, "")
+    .replace(/\s*গাইড$/, "")
     .trim();
   return { name: name || raw, tags };
 }
@@ -466,7 +469,19 @@ export function withMathNames(bookName: string, p: ParsedTitle): ParsedTitle {
    The General branch mixes compulsory subjects with the three SSC streams.
    Grouping follows the user's mapping (বিজ্ঞান = Business per the SSC
    curriculum, where general science belongs to the non-science groups). */
-export type Stream = "compulsory" | "science" | "business" | "humanities";
+export type Stream =
+  "compulsory" | "science" | "business" | "humanities" | "religion" | "extra";
+
+/* every y-like char in a stream pattern accepts all three data forms
+   (precomposed য়, decomposed য+়, bare য — uploaders mix them, e.g.
+   ব্যবসায়/উদ্যোগ vs গার্হস্থ্য) and whitespace runs are tolerated */
+const ANY_Y = "(?:\u09df|\u09af\u09bc|\u09af)";
+function streamPat(src: string): RegExp {
+  const body = nz(src)
+    .replace(/[\u09df\u09af]/g, ANY_Y)
+    .replace(/\s+/g, "\\s+");
+  return new RegExp("^" + body);
+}
 
 const STREAM_MATCHERS: [Stream, RegExp][] = (
   [
@@ -476,14 +491,16 @@ const STREAM_MATCHERS: [Stream, RegExp][] = (
     ],
     [
       "business",
-      "^(হিসাববিজ্ঞান|ব্যবসায়য় উদ্যোগ|ফিন্যান্স|বিজ্ঞান|Finance|Accounting|Entrepreneurship)",
+      "^(হিসাববিজ্ঞান|ব্যবসায় উদ্যোগ|ফিন্যান্স|বিজ্ঞান|Finance|Accounting|Entrepreneurship)",
     ],
     [
       "humanities",
-      "^(অর্থনীতি|বাংলাদেশের ইতিহাস|ভূগোল|পৌরনীতি|Economics|Geography|History|Civics)",
+      "^(অর্থনীতি|বাংলাদেশের ইতিহাস|বাংলাদেশ ও বিশ্বপরিচয়|ভূগোল|পৌরনীতি|Economics|Geography|History|Civics)",
     ],
+    ["religion", "^(ইসলাম|হিন্দু|বৌদ্ধ|খ্রিস্ট|ধর্ম|Islam|Hindu|Buddh|Christ)"],
+    ["extra", "^(গার্হস্থ্যবিজ্ঞান|কৃষিশিক্ষা|Home Science|Agriculture)"],
   ] as [Stream, string][]
-).map(([st, src]) => [st, new RegExp(nz(src))]);
+).map(([st, src]) => [st, streamPat(src)]);
 
 export function streamOf(bookName: string): Stream {
   const n = nz(bookName.trim());
@@ -491,9 +508,22 @@ export function streamOf(bookName: string): Stream {
   return "compulsory";
 }
 
+/** the MCQ/CQ marker of an upload ("গণিত গাইড MCQ (SSC 2028)" → "MCQ") */
+export function isMcqBook(raw: string): boolean {
+  return parseBookName(raw).tags.includes("MCQ");
+}
+
+/** pairing key: the subject without guide/MCQ/CQ/SSC decorations — two books
+    with the same core are the same subject (CQ book + its MCQ twin) */
+export function bookCore(raw: string): string {
+  return parseBookName(raw).name.replace(/\s+/g, " ").trim();
+}
+
 export const STREAM_LABEL: Record<Stream, string> = {
   compulsory: "Compulsory",
   science: "Science",
   business: "Business Studies",
   humanities: "Humanities",
+  religion: "Religion",
+  extra: "Extra",
 };

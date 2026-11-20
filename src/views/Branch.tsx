@@ -10,6 +10,8 @@ import { ErrorState } from "@/components/ErrorState";
 import { S } from "@/config";
 import { loadSnapshot, getBooks } from "@/catalog";
 import {
+  bookCore,
+  isMcqBook,
   parseBookName,
   streamOf,
   STREAM_LABEL,
@@ -162,16 +164,28 @@ export function Branch() {
   }
 
   function renderGrouped() {
+    /* MCQ twins merge into their CQ book's chapter list — hide their cards */
+    const visible = data!.items.filter((bk) => {
+      if (!isMcqBook(bk.name)) return true;
+      return !data!.items.some(
+        (x) =>
+          String(x.id) !== String(bk.id) &&
+          !isMcqBook(x.name) &&
+          bookCore(x.name) === bookCore(bk.name),
+      );
+    });
     const byStream = new Map<Stream, Book[]>();
     for (const g of [
       "compulsory",
       "science",
       "business",
       "humanities",
+      "religion",
+      "extra",
     ] as Stream[])
       byStream.set(
         g,
-        data!.items.filter((bk) => streamOf(bk.name) === g),
+        visible.filter((bk) => streamOf(bk.name) === g),
       );
     const present = [...byStream.entries()].filter(([, v]) => v.length > 0);
     const single = present.length === 1; // don't label a one-group branch

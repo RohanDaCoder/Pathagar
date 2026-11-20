@@ -1,13 +1,21 @@
 /* views/Book.tsx — chapter list of one book + the download toolbar.
    Chapters arrive pre-parsed & ordered by the adapter (lib/titles.ts via
    catalog.ts): num/label/display/pages/kind. Row state re-renders through
-   useDlVersion (the queue is external to React). */
+   useDlVersion (the queue is external to React).
+
+   v1.5 structure:
+   - the book's MCQ twin (same subject, "… গাইড MCQ" upload) merges into this
+     list as a leading "MCQ" section — its card is hidden in the branch view
+   - books whose chapters split into parts (২.১, ২.২…) collapse to parent
+     rows; tapping one opens /book/:id/part/:major listing bare part numbers
+   - /book/:bookId/part/:major renders just those parts ("nothing else") */
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   Check,
   ChevronLeft,
+  ChevronRight,
   Download,
   FileText,
   RotateCcw,
@@ -29,7 +37,8 @@ import { DL } from "@/dlqueue";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
 import { errMessage } from "@/lib/errors";
-import type { Chapter, ListResult } from "@/types";
+import { bookCore, isMcqBook, parseBookName, toBn } from "@/lib/titles";
+import type { Book, Chapter, ListResult } from "@/types";
 
 function SectionLabel({ text }: { text: string }) {
   return (
@@ -39,8 +48,55 @@ function SectionLabel({ text }: { text: string }) {
   );
 }
 
+/* one list entry: a plain chapter, or a parent row for a split chapter */
+type Row =
+  | { t: "ch"; ch: Chapter; book: Book }
+  | {
+      t: "grp";
+      major: number;
+      parts: Chapter[];
+      whole?: Chapter;
+      book: Book;
+    };
+
+/** collapse decimal splits (২.১, ২.২ …) into parent rows when a book has
+    "many splits of a single chapter" (≥ 4 parts); otherwise plain rows */
+function buildRows(chs: Chapter[], bk: Book): Row[] {
+  const numbered = chs.filter((c) => typeof c.num === "number");
+  const decimals = numbered.filter((c) => (c.num ?? 0) % 1 !== 0);
+  if (decimals.length < 4) return chs.map((ch) => ({ t: "ch", ch, book: bk }));
+  const rows: Row[] = [];
+  const majors = [
+    ...new Set(numbered.map((c) => Math.floor(c.num ?? 0))),
+  ].toSorted((a, b) => a - b);
+  for (const maj of majors) {
+    const whole = numbered.find((c) => c.num === maj);
+    const parts = numbered.filter(
+      (c) => Math.floor(c.num ?? 0) === maj && (c.num ?? 0) % 1 !== 0,
+    );
+    if (parts.length)
+      rows.push({ t: "grp", major: maj, parts, whole, book: bk });
+    else if (whole) rows.push({ t: "ch", ch: whole, book: bk });
+  }
+  for (const ch of chs)
+    if (typeof ch.num !== "number") rows.push({ t: "ch", ch, book: bk });
+  return rows;
+}
+
+/** parent display: the first part's title without its "— অংশ N" suffix
+    ("২. সেট ও ফাংশন — অংশ ১" → "২. সেট ও ফাংশন") */
+function parentTitle(parts: Chapter[]): string {
+  const d = parts[0]?.display || "";
+  return (
+    d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim() || parts[0]?.label || "Chapter"
+  );
+}
+
 export function Book() {
-  const { bookId = "" } = useParams();
+  const { bookId = "", major: majorParam } = useParams<{
+    bookId: string;
+    major?: string;
+  }>();
   const navigate = useNavigate();
   useDlVersion(); // re-render on download-queue updates
 
@@ -59,8 +115,33 @@ export function Book() {
     }
   }
   const branchLabel = snap.branches.find((b) => b.id === branchId)?.label || "";
+  const majorNum = majorParam !== undefined ? Number(majorParam) : null;
 
-  const [data, setData] = useState<ListResult<Chapter> | null>(null);
+  /* the MCQ twin of this book — same branch, same subject core, MCQ upload */
+  let mcqId: string | null = null;
+  let mcqName: string | null = null;
+  if (!majorNum && bookName && !isMcqBook(bookName)) {
+    const core = bookCore(bookName);
+    for (const b of snap.branches) {
+      if (branchId && b.id !== branchId) continue;
+      const f = b.books.find(
+        (x) =>
+          String(x.id) !== bookId &&
+          isMcqBook(x.name) &&
+          bookCore(x.name) === core,
+      );
+      if (f) {
+        mcqId = String(f.id);
+        mcqName = f.name;
+        break;
+      }
+    }
+  }
+
+  const [data, setData] = useState<{
+    main: ListResult<Chapter>;
+    mcq?: { book: Book; items: Chapter[] };
+  } | null>(null);
   const [error, setError] = useState<{ title: string; detail?: string } | null>(
     null,
   );
@@ -73,15 +154,29 @@ export function Book() {
     let cancelled = false;
     void (async () => {
       try {
-        const [chapters, metas] = await Promise.all([
+        const [chapters, mcqChapters, metas] = await Promise.all([
           getChapters(bookId),
+          mcqId ? getChapters(mcqId) : Promise.resolve(null),
           DB.allMeta(),
         ]);
         if (cancelled) return;
-        const mine = metas.filter((m) => m.bookId === bookId);
+        const mine = metas.filter(
+          (m) => m.bookId === bookId || (mcqId !== null && m.bookId === mcqId),
+        );
         setSaved(new Set(mine.map((m) => m.id)));
         setSizes(Object.fromEntries(mine.map((m) => [m.id, m.size || 0])));
-        setData(chapters);
+        setData({
+          main: chapters,
+          mcq:
+            mcqId && mcqChapters
+              ? {
+                  book: { id: mcqId, name: mcqName || "Book", branchId },
+                  items: mcqChapters.items.filter(
+                    (c) => c.kind !== "front" && c.kind !== "back",
+                  ),
+                }
+              : undefined,
+        });
       } catch (e) {
         if (!cancelled)
           setError({
@@ -94,10 +189,10 @@ export function Book() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- reload is an intentional refetch trigger
-  }, [bookId, reload]);
+  }, [bookId, mcqId, mcqName, branchId, reload]);
 
   const book = { id: bookId, name: bookName || "Book", branchId };
-  const items = data?.items ?? [];
+  const items = data?.main.items ?? [];
   const done = items.filter(
     (ch) =>
       saved.has(String(ch.id)) || S.dl.get(String(ch.id))?.status === "done",
@@ -122,70 +217,63 @@ export function Book() {
   const fronts = items.filter((c) => c.kind === "front");
   const chapters = items.filter((c) => c.kind !== "front" && c.kind !== "back");
   const extras = items.filter((c) => c.kind === "back");
+  const mainRows = buildRows(chapters, book);
+  const mcqRows = data?.mcq ? buildRows(data.mcq.items, data.mcq.book) : [];
+  const parts =
+    majorNum !== null
+      ? chapters.filter(
+          (c) => typeof c.num === "number" && Math.floor(c.num) === majorNum,
+        )
+      : [];
+  const bp = parseBookName(bookName || "Book");
+
+  const backLink = (
+    <nav className="mb-1 flex items-center gap-1 text-sm text-muted-foreground">
+      {majorNum !== null ? (
+        <Link
+          to={`/book/${bookId}`}
+          className="inline-flex items-center gap-1 hover:underline"
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" /> {bp.name}
+        </Link>
+      ) : branchId ? (
+        <Link
+          to={`/branch/${branchId}`}
+          className="inline-flex items-center gap-1 hover:underline"
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" />{" "}
+          {branchLabel || "Back"}
+        </Link>
+      ) : (
+        <Link to="/" className="inline-flex items-center gap-1 hover:underline">
+          <ChevronLeft className="size-4" aria-hidden="true" /> Home
+        </Link>
+      )}
+    </nav>
+  );
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6">
-      <nav className="mb-1 flex items-center gap-1 text-sm text-muted-foreground">
-        {branchId ? (
-          <Link
-            to={`/branch/${branchId}`}
-            className="inline-flex items-center gap-1 hover:underline"
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />{" "}
-            {branchLabel || "Back"}
-          </Link>
+      {backLink}
+      <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold">
+        {majorNum !== null ? `অধ্যায় ${toBn(majorNum)}` : bp.name}
+        {majorNum === null && bp.tags.length
+          ? bp.tags.map((tg) => (
+              <Badge key={tg} variant="secondary">
+                {tg}
+              </Badge>
+            ))
+          : null}
+      </h1>
+      {majorNum === null ? (
+        branchLabel ? (
+          <p className="mb-4 text-sm text-muted-foreground">{branchLabel}</p>
         ) : (
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1 hover:underline"
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" /> Home
-          </Link>
-        )}
-      </nav>
-      <h1 className="text-xl font-bold">{bookName || "Book"}</h1>
-      {branchLabel ? (
-        <p className="mb-4 text-sm text-muted-foreground">{branchLabel}</p>
+          <div className="mb-4" />
+        )
       ) : (
         <div className="mb-4" />
       )}
-
-      {total > 0 ? (
-        <div className="mb-4 flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <Progress
-              value={pct}
-              className="h-2"
-              aria-label="Book download progress"
-            />
-            {speed > 0 ? (
-              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                {speed < 1024 * 1024
-                  ? `${Math.round(speed / 1024)} KB/s`
-                  : `${(speed / (1024 * 1024)).toFixed(1)} MB/s`}
-              </p>
-            ) : null}
-          </div>
-          <Button
-            size="sm"
-            disabled={done >= total}
-            onClick={() => {
-              let n = 0;
-              for (const ch of items) {
-                const id = String(ch.id);
-                if (!saved.has(id) && !S.dl.has(id)) {
-                  DL.enqueue(ch, book);
-                  n++;
-                }
-              }
-              if (n) toast(`Started downloading ${n} chapters`);
-            }}
-          >
-            <Download className="size-4" aria-hidden="true" />
-            {done >= total ? "Done" : `Download all (${done}/${total})`}
-          </Button>
-        </div>
-      ) : null}
 
       {error ? (
         <ErrorState
@@ -203,34 +291,200 @@ export function Book() {
             <Skeleton key={i} className="h-14 w-full rounded-xl" />
           ))}
         </div>
+      ) : majorNum !== null ? (
+        /* parts view — bare part numbers, nothing else */
+        parts.length === 0 ? (
+          <p className="py-10 text-center text-muted-foreground">
+            No parts found for this chapter.
+          </p>
+        ) : (
+          <div className="grid gap-2">{parts.map((ch) => partRow(ch))}</div>
+        )
       ) : (
-        <div className="grid gap-2">
-          {data.stale ? (
-            <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-              <WifiOff className="size-4 shrink-0" aria-hidden="true" />
-              Offline — saved list
-            </Card>
+        <>
+          {total > 0 ? (
+            <div className="mb-4 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <Progress
+                  value={pct}
+                  className="h-2"
+                  aria-label="Book download progress"
+                />
+                {speed > 0 ? (
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                    {speed < 1024 * 1024
+                      ? `${Math.round(speed / 1024)} KB/s`
+                      : `${(speed / (1024 * 1024)).toFixed(1)} MB/s`}
+                  </p>
+                ) : null}
+              </div>
+              <Button
+                size="sm"
+                disabled={done >= total}
+                onClick={() => {
+                  let n = 0;
+                  for (const ch of items) {
+                    const id = String(ch.id);
+                    if (!saved.has(id) && !S.dl.has(id)) {
+                      DL.enqueue(ch, book);
+                      n++;
+                    }
+                  }
+                  if (n) toast(`Started downloading ${n} chapters`);
+                }}
+              >
+                <Download className="size-4" aria-hidden="true" />
+                {done >= total ? "Done" : `Download all (${done}/${total})`}
+              </Button>
+            </div>
           ) : null}
-          {items.length === 0 ? (
-            <p className="py-10 text-center text-muted-foreground">
-              No chapters found for this book.
-            </p>
-          ) : (
-            <>
-              {fronts.length ? <SectionLabel text="Contents" /> : null}
-              {fronts.map((ch) => chapterRow(ch))}
-              {chapters.length ? <SectionLabel text="Chapters" /> : null}
-              {chapters.map((ch) => chapterRow(ch))}
-              {extras.length ? <SectionLabel text="Exam & practice" /> : null}
-              {extras.map((ch) => chapterRow(ch))}
-            </>
-          )}
-        </div>
+
+          <div className="grid gap-2">
+            {data.main.stale ? (
+              <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <WifiOff className="size-4 shrink-0" aria-hidden="true" />
+                Offline — saved list
+              </Card>
+            ) : null}
+            {items.length === 0 ? (
+              <p className="py-10 text-center text-muted-foreground">
+                No chapters found for this book.
+              </p>
+            ) : (
+              <>
+                {mcqRows.length ? <SectionLabel text="MCQ" /> : null}
+                {mcqRows.map((r) =>
+                  r.t === "grp" ? groupRow(r) : chapterRow(r.ch, r.book),
+                )}
+                {fronts.length ? <SectionLabel text="Contents" /> : null}
+                {fronts.map((ch) => chapterRow(ch, book))}
+                {mainRows.length ? <SectionLabel text="Chapters" /> : null}
+                {mainRows.map((r) =>
+                  r.t === "grp" ? groupRow(r) : chapterRow(r.ch, r.book),
+                )}
+                {extras.length ? <SectionLabel text="Exam & practice" /> : null}
+                {extras.map((ch) => chapterRow(ch, book))}
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
 
-  function chapterRow(ch: Chapter) {
+  /* bare part row for the /part/:major view — number, progress, state */
+  function partRow(ch: Chapter) {
+    const id = String(ch.id);
+    const st = S.dl.get(id);
+    const isSaved = saved.has(id);
+    const isDownloading = st?.status === "downloading";
+    const isQueued = st?.status === "queued";
+    const isError = st?.status === "error";
+    return (
+      <Card
+        key={id}
+        className={
+          "flex items-center gap-3 p-3 transition-colors " +
+          (isSaved || st?.status === "done"
+            ? "cursor-pointer hover:bg-muted/50"
+            : isError
+              ? "border-destructive/40"
+              : "")
+        }
+        onClick={() => {
+          if (isSaved || st?.status === "done") {
+            void navigate(`/read/${id}`);
+          } else if (!isDownloading && !isQueued) {
+            DL.enqueue(ch, book, { autoOpen: true });
+          }
+        }}
+      >
+        <span
+          className="flex h-9 min-w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 px-2 text-sm font-bold tabular-nums text-primary"
+          aria-hidden="true"
+        >
+          {toBn(ch.num ?? "·")}
+        </span>
+        <div className="min-w-0 flex-1">
+          {isDownloading ? (
+            <Progress value={st?.pct ?? 0} className="h-1.5" />
+          ) : isError ? (
+            <span className="text-xs text-destructive">{st?.error}</span>
+          ) : isQueued ? (
+            <span className="text-xs text-muted-foreground">Queued…</span>
+          ) : null}
+        </div>
+        {isDownloading || isQueued ? (
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Cancel download"
+            onClick={(e) => {
+              e.stopPropagation();
+              DL.cancel(id);
+            }}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        ) : isSaved || st?.status === "done" ? (
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Check className="size-4" aria-hidden="true" />
+          </span>
+        ) : isError ? (
+          <span className="flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <RotateCcw className="size-4" aria-hidden="true" />
+          </span>
+        ) : (
+          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <Download className="size-4" aria-hidden="true" />
+          </span>
+        )}
+      </Card>
+    );
+  }
+
+  /* parent row for a split chapter — opens the parts list */
+  function groupRow(g: Extract<Row, { t: "grp" }>) {
+    const first = g.parts[0];
+    const word = first.label?.split(" ")[0] || "অধ্যায়";
+    const savedCount = g.parts.filter((p) => saved.has(String(p.id))).length;
+    return (
+      <Card
+        key={`g-${g.book.id}-${g.major}`}
+        className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-muted/50"
+        onClick={() => void navigate(`/book/${g.book.id}/part/${g.major}`)}
+      >
+        <span
+          className="flex h-9 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
+          aria-hidden="true"
+        >
+          <span className="text-[10px] font-medium leading-none opacity-80">
+            {word}
+          </span>
+          <span className="text-sm font-bold leading-tight">
+            {toBn(g.major)}
+          </span>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{parentTitle(g.parts)}</p>
+          <p className="text-xs text-muted-foreground">
+            {g.parts.length} parts
+            {savedCount === g.parts.length
+              ? " · ✓ saved"
+              : savedCount
+                ? ` · ${savedCount}/${g.parts.length} saved`
+                : ""}
+          </p>
+        </div>
+        <ChevronRight
+          className="size-5 shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+      </Card>
+    );
+  }
+
+  function chapterRow(ch: Chapter, bk: Book) {
     const id = String(ch.id);
     const st = S.dl.get(id);
     const isSaved = saved.has(id);
@@ -253,7 +507,7 @@ export function Book() {
           if (isSaved || st?.status === "done") {
             void navigate(`/read/${id}`);
           } else if (!isDownloading && !isQueued) {
-            DL.enqueue(ch, book, { autoOpen: true });
+            DL.enqueue(ch, bk, { autoOpen: true });
           }
         }}
       >

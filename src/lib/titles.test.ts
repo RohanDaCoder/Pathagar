@@ -2,7 +2,9 @@
    1247-chapter API survey; see scripts/survey output) */
 import { describe, expect, test } from "bun:test";
 import {
+  bookCore,
   compareChapters,
+  isMcqBook,
   parseBookName,
   parseTitle,
   sortParsed,
@@ -171,11 +173,11 @@ describe("ordering", () => {
 describe("parseBookName", () => {
   test("extracts SSC year and MCQ/CQ tags", () => {
     expect(parseBookName("পদার্থবিজ্ঞান গাইড MCQ (SSC 2028)")).toEqual({
-      name: "পদার্থবিজ্ঞান গাইড",
+      name: "পদার্থবিজ্ঞান",
       tags: ["SSC 2028", "MCQ"],
     });
     expect(parseBookName("বাংলা ১ম পত্র গাইড (SSC 2028)")).toEqual({
-      name: "বাংলা ১ম পত্র গাইড",
+      name: "বাংলা ১ম পত্র",
       tags: ["SSC 2028"],
     });
   });
@@ -216,7 +218,7 @@ describe("streamOf — academic stream grouping", () => {
   test("business subjects (general science belongs to non-scance groups per SSC)", () => {
     expect(streamOf("ফিন্যান্স ও ব্যাংকিং গাইড (SSC 2028)")).toBe("business");
     expect(streamOf("হিসাববিজ্ঞান গাইড MCQ (SSC 2028)")).toBe("business");
-    expect(streamOf("ব্যবসায়য় উদ্যোগ গাইড (SSC 2028)")).toBe("business");
+    expect(streamOf("ব্যবসায় উদ্য়োগ গাইড (SSC 2028)")).toBe("business");
     expect(streamOf("বিজ্ঞান গাইড বই (SSC 2028)")).toBe("business");
   });
 
@@ -227,11 +229,68 @@ describe("streamOf — academic stream grouping", () => {
     );
     expect(streamOf("ভূগোল ও পরিবেশ গাইড (SSC 2028)")).toBe("humanities");
     expect(streamOf("পৌরনীতি ও নাগরিকতা গাইড (SSC 2028)")).toBe("humanities");
+    expect(streamOf("বাংলাদেশ ও বিশ্বপরিচয় গাইড (SSC 2028)")).toBe(
+      "humanities",
+    );
   });
 
   test("everything else is compulsory", () => {
     expect(streamOf("বাংলা ১ম পত্র গাইড (SSC 2028)")).toBe("compulsory");
     expect(streamOf("তথ্য ও যোগাযোগ প্রযুক্তি (SSC 2028)")).toBe("compulsory");
-    expect(streamOf("গার্হস্থ্যবিজ্ঞান গাইড (SSC 2028)")).toBe("compulsory");
+  });
+});
+
+describe("streamOf — religion and extra groups (v1.5)", () => {
+  test("religion books", () => {
+    expect(streamOf("ইসলাম শিক্ষা গাইড (SSC 2028)")).toBe("religion");
+    expect(streamOf("হিন্দুধর্ম শিক্ষা গাইড (SSC 2028)")).toBe("religion");
+    expect(streamOf("বৌদ্ধধর্ম শিক্ষা গাইড (SSC 2028)")).toBe("religion");
+    expect(streamOf("খ্রিস্ট ধর্ম শিক্ষা গাইড (SSC 2028)")).toBe("religion");
+  });
+
+  test("extra books (গার্হস্থ্যবিজ্ঞান with bare য, কৃষিশিক্ষা)", () => {
+    expect(streamOf("গার্হস্থ্যবিজ্ঞান গাইড (SSC 2028)")).toBe("extra");
+    expect(streamOf("কৃষিশিক্ষা গাইড (SSC 2028)")).toBe("extra");
+  });
+
+  test("ব্যবসায় উদ্য়োগ matches regardless of য় form and spacing", () => {
+    expect(streamOf("ব্যবসায় উদ্য়োগ গাইড (SSC 2028)")).toBe("business");
+    // decomposed য+় and double space, as uploaders actually spell it
+    const dec = "ব্যবসায়  উদ্যোগ গাইড (SSC 2028)";
+    expect(streamOf(dec)).toBe("business");
+  });
+});
+
+describe("parseBookName (v1.5)", () => {
+  test("strips a trailing গাইড from every name", () => {
+    expect(parseBookName("বাংলা ১ম পত্র গাইড (SSC 2028)").name).toBe(
+      "বাংলা ১ম পত্র",
+    );
+    expect(parseBookName("অর্থনীতি গাইড বই (SSC 2028)").name).toBe("অর্থনীতি");
+    expect(parseBookName("ব্যবসায় উদ্য়োগ গাইড (SSC 2028)").name).toBe(
+      "ব্যবসায় উদ্য়োগ",
+    );
+  });
+
+  test("ইংরেজি ১ম পত্রের bare 'SSC 2028' year is still a tag, not name", () => {
+    const bp = parseBookName("ইংরেজি ১ম পত্র গাইড বই SSC 2028");
+    expect(bp.name).toBe("ইংরেজি ১ম পত্র");
+    expect(bp.tags).toContain("SSC 2028");
+  });
+});
+
+describe("MCQ pairing (v1.5)", () => {
+  test("isMcqBook + bookCore pair the গণিত twins", () => {
+    expect(isMcqBook("গণিত গাইড MCQ (SSC 2028)")).toBe(true);
+    expect(isMcqBook("গণিত গাইড CQ (SSC 2028)")).toBe(false);
+    expect(bookCore("গণিত গাইড MCQ (SSC 2028)")).toBe("গণিত");
+    expect(bookCore("গণিত গাইড CQ (SSC 2028)")).toBe("গণিত");
+    expect(bookCore("উচ্চতর গণিত গাইড CQ (SSC 2028)")).toBe("উচ্চতর গণিত");
+  });
+
+  test("double-space জীববিজ্ঞান twins still pair", () => {
+    expect(bookCore("জীববিজ্ঞান  MCQ (SSC 2028)")).toBe(
+      bookCore("জীববিজ্ঞান  CQ (SSC 2028)"),
+    );
   });
 });

@@ -126,6 +126,7 @@ function Shell() {
           <Route path="/" element={<Home />} />
           <Route path="/branch/:branchId" element={<Branch />} />
           <Route path="/book/:bookId" element={<Book />} />
+          <Route path="/book/:bookId/part/:major" element={<Book />} />
           <Route path="/library" element={<LibraryView />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/read/:chapterId" element={<Reader />} />
