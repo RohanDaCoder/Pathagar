@@ -1,9 +1,6 @@
-/* hooks/useInstallPrompt.ts — PWA install flow.
-   Follows the modern-web-guidance install-web-app guide: prefer navigator.install()
-   when supported, otherwise the captured beforeinstallprompt (Android Chrome).
-   The event is single-use — it is saved and cleared before awaiting the user's
-   choice, and the affordance only appears once an install mechanism is
-   confirmed (never a dead button). */
+/* hooks/useInstallPrompt.ts — PWA install flow: navigator.install() when
+   supported, else the single-use beforeinstallprompt event (Android Chrome).
+   The affordance appears only once an install mechanism is confirmed. */
 
 import { useCallback, useEffect, useState } from "react";
 
