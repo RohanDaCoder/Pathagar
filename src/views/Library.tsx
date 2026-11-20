@@ -21,6 +21,7 @@ import {
 import { storageEstimate } from "@/lib/storage";
 import { DB } from "@/db";
 import { fmtMB } from "@/lib/format";
+import { parseBookName } from "@/lib/titles";
 import type { ChapterMeta } from "@/types";
 
 export function Library() {
@@ -100,7 +101,14 @@ export function Library() {
             <section key={gname}>
               <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <FileText className="size-4" aria-hidden="true" />
-                <span className="truncate">{gname}</span>
+                <span className="truncate">
+                  {(() => {
+                    const bp = parseBookName(gname);
+                    return bp.tags.length
+                      ? `${bp.name} · ${bp.tags.join(" · ")}`
+                      : bp.name;
+                  })()}
+                </span>
                 <span className="ml-auto shrink-0 font-normal">
                   {items.length} chapters
                 </span>

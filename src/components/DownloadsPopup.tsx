@@ -19,6 +19,7 @@ import { S } from "@/config";
 import { DL } from "@/dlqueue";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
+import { parseBookName } from "@/lib/titles";
 
 function fmtSpeed(bytesPerSec: number): string {
   if (!bytesPerSec || bytesPerSec < 1) return "—";
@@ -98,16 +99,6 @@ export function DownloadsDialog({
                 {fmtSpeed(stats.speed)}
               </span>
             ) : null}
-            {stats.downloading + stats.queued > 0 ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                className={stats.speed ? "" : "ml-auto"}
-                onClick={() => DL.cancelAll()}
-              >
-                Cancel all
-              </Button>
-            ) : null}
           </DialogTitle>
           <DialogDescription className="sr-only">
             Active, queued and finished chapter downloads
@@ -151,7 +142,12 @@ export function DownloadsDialog({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{title}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {job.book.name}
+                        {(() => {
+                          const bp = parseBookName(job.book.name);
+                          return bp.tags.length
+                            ? `${bp.name} · ${bp.tags.join(" · ")}`
+                            : bp.name;
+                        })()}
                       </p>
                       {isDl ? (
                         <div className="mt-1 flex items-center gap-2">
@@ -213,6 +209,19 @@ export function DownloadsDialog({
             </ul>
           )}
         </div>
+
+        {stats.downloading + stats.queued > 0 ? (
+          <div className="border-t p-3">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full"
+              onClick={() => DL.cancelAll()}
+            >
+              Cancel all
+            </Button>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
