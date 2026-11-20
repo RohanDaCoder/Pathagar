@@ -19,6 +19,12 @@ export function bnNum(s: string): string {
 }
 
 /** ASCII digits → Bengali (for pretty display of numbers). */
+/** drop a leading "২." / "2. " chapter number — the অধ্যায় badge already
+    shows it, so "২. সেট ও ফাংশন" renders as "সেট ও ফাংশন" */
+export function stripLeadNum(s: string): string {
+  return s.replace(/^[০-৯0-9]+\.\s*/, "").trim();
+}
+
 export function toBn(n: number | string): string {
   return String(n).replace(/[0-9]/g, (c) => BN_DIGITS[Number(c)]);
 }

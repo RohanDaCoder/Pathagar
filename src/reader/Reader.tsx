@@ -23,6 +23,7 @@ import { ErrorDialog } from "@/components/ErrorDialog";
 import { toast } from "sonner";
 import { DB } from "@/db";
 import { errMessage } from "@/lib/errors";
+import { parseBookName, stripLeadNum } from "@/lib/titles";
 import type { ChapterMeta } from "@/types";
 import type {
   PDFDocumentLoadingTask,
@@ -64,6 +65,8 @@ export function Reader() {
   const [openError, setOpenError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [numPages, setNumPages] = useState(0);
+  const [editingPage, setEditingPage] = useState(false);
+  const [pageDraft, setPageDraft] = useState("");
   const [loading, setLoading] = useState(true);
   /* zoom = 0 → auto-fit; > 0 → manual absolute scale */
   const [zoom, setZoom] = useState(0);
@@ -315,6 +318,14 @@ export function Reader() {
     setTimeout(() => URL.revokeObjectURL(u), 120000);
   }
 
+  /* tap the page counter → type a number → Enter/blur jumps */
+  function commitPage() {
+    setEditingPage(false);
+    const n = parseInt(pageDraft, 10);
+    if (Number.isFinite(n) && numPages > 0)
+      setPageNum(Math.min(Math.max(n, 1), numPages));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <ErrorDialog
@@ -342,7 +353,9 @@ export function Reader() {
         </Button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
-            {meta ? `${meta.title} · ${meta.bookName}` : "Reader"}
+            {meta
+              ? `${stripLeadNum(meta.title) || meta.title} · ${parseBookName(meta.bookName).name}`
+              : "Reader"}
           </p>
         </div>
         <span
@@ -415,9 +428,38 @@ export function Reader() {
         >
           ‹ Prev
         </Button>
-        <p className="flex-1 text-center text-sm tabular-nums text-muted-foreground">
-          {pageNum} / {numPages}
-        </p>
+        <div className="flex flex-1 items-center justify-center">
+          {editingPage ? (
+            <input
+              autoFocus
+              type="text"
+              inputMode="numeric"
+              value={pageDraft}
+              aria-label="Go to page"
+              onChange={(e) =>
+                setPageDraft(e.target.value.replace(/[^0-9]/g, ""))
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitPage();
+                if (e.key === "Escape") setEditingPage(false);
+              }}
+              onBlur={commitPage}
+              className="w-20 rounded-md border bg-transparent px-2 py-1 text-center text-sm tabular-nums outline-none focus:border-primary"
+            />
+          ) : (
+            <button
+              type="button"
+              className="text-sm tabular-nums text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setPageDraft(String(pageNum));
+                setEditingPage(true);
+              }}
+              aria-label="Jump to page"
+            >
+              {pageNum} / {numPages}
+            </button>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"

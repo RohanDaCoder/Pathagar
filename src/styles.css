@@ -156,3 +156,10 @@
 body {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Android (web + PWA): the pull-to-refresh gesture eats two-finger zooms
+   on the reader — disable it at the document level. */
+html,
+body {
+  overscroll-behavior-y: none;
+}

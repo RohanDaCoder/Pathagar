@@ -21,7 +21,7 @@ import {
 import { storageEstimate } from "@/lib/storage";
 import { DB } from "@/db";
 import { fmtMB } from "@/lib/format";
-import { parseBookName } from "@/lib/titles";
+import { parseBookName, stripLeadNum } from "@/lib/titles";
 import type { ChapterMeta } from "@/types";
 
 export function Library() {
@@ -128,7 +128,9 @@ export function Library() {
                       <FileText className="size-4" aria-hidden="true" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{m.title}</p>
+                      <p className="truncate text-sm font-medium">
+                        {stripLeadNum(m.title) || m.title}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {fmtMB(m.size || 0)} ·{" "}
                         {new Date(m.addedAt).toLocaleDateString("en-GB")}

@@ -8,7 +8,7 @@
 import type { BookCtx, DlState, Snapshot } from "./types";
 
 export const APP_NAME = "Pathagar";
-export const APP_VERSION = "1.4.0";
+export const APP_VERSION = "1.6.0";
 
 /** The original app's Laravel backend (Stage-1 report). */
 export const API_URL = "https://books.tetashweb.xyz/api/v1/app/";

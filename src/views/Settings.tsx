@@ -127,16 +127,12 @@ export function Settings() {
             {APP_NAME} v{APP_VERSION}
           </p>
           <p className="mt-2">
-            A lightweight PWA for reading Class 9-10 guide books — install it on
-            your phone or desktop (see "Install app" above) and it works offline
-            like a native app. The web app is always the latest version —
-            nothing to update manually.
+            App creator &amp; author:{" "}
+            <span className="font-medium text-foreground">AL Zami Rohan</span>
           </p>
           <p className="mt-2">
-            The catalog and PDFs come from the original “Class 9 All Subject
-            Books” app's server (reverse-engineered with apkscope). For
-            students' personal study only — the books belong to their
-            publishers. If you like it, use the original app too.
+            Guide books are fetched by an external provider,{" "}
+            <span className="font-medium text-foreground">TetashWeb</span>.
           </p>
         </Card>
       </fieldset>

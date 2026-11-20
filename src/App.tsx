@@ -29,6 +29,7 @@ import { DL } from "@/dlqueue";
 import { Home } from "@/views/Home";
 import { Branch } from "@/views/Branch";
 import { Book } from "@/views/Book";
+import { Pick } from "@/views/Pick";
 import { Library as LibraryView } from "@/views/Library";
 import { Settings } from "@/views/Settings";
 import { Reader } from "@/reader/Reader";
@@ -126,6 +127,7 @@ function Shell() {
           <Route path="/" element={<Home />} />
           <Route path="/branch/:branchId" element={<Branch />} />
           <Route path="/book/:bookId" element={<Book />} />
+          <Route path="/book/:bookId/pick" element={<Pick />} />
           <Route path="/book/:bookId/part/:major" element={<Book />} />
           <Route path="/library" element={<LibraryView />} />
           <Route path="/settings" element={<Settings />} />

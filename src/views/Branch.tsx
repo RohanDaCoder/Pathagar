@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { ChevronLeft, ChevronRight, WifiOff } from "lucide-react";
+import { ChevronLeft, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,59 +106,48 @@ export function Branch() {
 
   function bookCard(bk: Book): React.JSX.Element {
     const bp = parseBookName(bk.name);
+    /* the MCQ/CQ twin of this subject — same core name, opposite variant */
+    const twin = data?.items.find(
+      (x) =>
+        String(x.id) !== String(bk.id) &&
+        bookCore(x.name) === bookCore(bk.name) &&
+        isMcqBook(x.name) !== isMcqBook(bk.name),
+    );
     return (
+      /* names are centred: the old avatar + chevron layout left short names
+         drifting off-centre to the left */
       <Card
         key={bk.id}
-        className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-muted/50"
+        className="flex cursor-pointer flex-col items-center gap-1.5 p-4 text-center transition-colors hover:bg-muted/50"
         onClick={() => {
           S.bookCtx.set(String(bk.id), {
             id: String(bk.id),
             name: bk.name,
             branchId: id,
           });
-          window.location.hash = `#/book/${bk.id}`;
+          /* subjects that ship as MCQ + CQ uploads open the version chooser */
+          window.location.hash = twin
+            ? `#/book/${bk.id}/pick`
+            : `#/book/${bk.id}`;
         }}
       >
-        {bk.image ? (
-          <img
-            src={bk.image}
-            alt=""
-            loading="lazy"
-            className="size-14 shrink-0 rounded-lg object-cover"
-          />
-        ) : (
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xl font-semibold text-primary">
-            {(bp.name || "B").trim().charAt(0)}
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 font-semibold">{bp.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {meta?.books.find((x) => x.id === bk.id)?.chapters ?? "…"} chapters
-          </p>
-          {bp.tags.length ? (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {bp.tags.map((tg) => (
-                <Badge key={tg} variant="secondary">
-                  {tg}
-                </Badge>
-              ))}
-              {savedByBook[String(bk.id)] ? (
-                <Badge variant="outline">
-                  ✓ {savedByBook[String(bk.id)]} saved
-                </Badge>
-              ) : null}
-            </div>
-          ) : savedByBook[String(bk.id)] ? (
-            <Badge variant="secondary" className="mt-1">
+        <p className="line-clamp-2 font-semibold leading-snug">{bp.name}</p>
+        <p className="text-sm text-muted-foreground">
+          {meta?.books.find((x) => x.id === bk.id)?.chapters ?? "…"} chapters
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          {twin ? <Badge variant="outline">MCQ / CQ</Badge> : null}
+          {bp.tags.map((tg) => (
+            <Badge key={tg} variant="secondary">
+              {tg}
+            </Badge>
+          ))}
+          {savedByBook[String(bk.id)] ? (
+            <Badge variant="outline">
               ✓ {savedByBook[String(bk.id)]} saved
             </Badge>
           ) : null}
         </div>
-        <ChevronRight
-          className="size-5 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
       </Card>
     );
   }
