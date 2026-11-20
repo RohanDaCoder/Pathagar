@@ -20,7 +20,7 @@ import { openReader } from "../reader";
 import { go } from "../router";
 
 export async function renderLibrary() {
-  const metas = (await DB.allMeta()).sort(
+  const metas = (await DB.allMeta()).toSorted(
     (a, b) => (b.addedAt || 0) - (a.addedAt || 0),
   );
   const est = await storageEstimate();
@@ -69,7 +69,7 @@ export async function renderLibrary() {
   $$("[data-read]").forEach((b) => {
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      openReader(b.dataset.read || "");
+      void openReader(b.dataset.read || "");
     });
   });
   $$("[data-delbtn]").forEach((b) => {
@@ -78,7 +78,7 @@ export async function renderLibrary() {
       if (b.dataset.confirm) {
         await DB.delFile(b.dataset.delbtn || "");
         toast("Deleted");
-        renderLibrary();
+        void renderLibrary();
       } else {
         b.dataset.confirm = "1";
         b.innerHTML = svgCheck;
@@ -102,7 +102,7 @@ export async function renderLibrary() {
     if (ca.dataset.confirm) {
       await DB.clearAll();
       toast("Library cleared");
-      renderLibrary();
+      void renderLibrary();
     } else {
       ca.dataset.confirm = "1";
       ca.textContent = "Sure? Tap again";

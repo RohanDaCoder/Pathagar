@@ -1,4 +1,5 @@
 /* utils.ts — DOM helpers, number formatting, toasts, shared SVG icons */
+import { ApiError } from "./net";
 
 export const $ = <T extends HTMLElement = HTMLElement>(
   sel: string,
@@ -26,7 +27,10 @@ export const bn = (n: string | number): string => String(n);
 export const fmtMB = (bytes: number): string =>
   `${bn((bytes / 1048576).toFixed(1))} MB`;
 export const esc = (s: unknown): string =>
-  String(s ?? "").replace(
+  (typeof s === "string" || typeof s === "number" || typeof s === "boolean"
+    ? String(s)
+    : ""
+  ).replace(
     /[&<>"']/g,
     (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
@@ -122,4 +126,12 @@ export function viewHead(title: string, sub: string, brand = false): string {
 }
 export function crumbs(branch: string): string {
   return `<div class="crumbs"><a href="#/home">Home</a> ${svgChev} <span>${esc(branch)}</span></div>`;
+}
+
+/* catch-clause helpers: catch params are `unknown` under strict TS */
+export function errMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+export function errStatus(e: unknown): number | undefined {
+  return e instanceof ApiError ? e.status : undefined;
 }

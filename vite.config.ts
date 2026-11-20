@@ -18,14 +18,14 @@ const pdfProxy = {
 
 /* index.html tweaks: allow the HMR websocket through the CSP in dev; in build,
    prefix icon hrefs with the deployment base (public/ assets are not rebased by vite) */
-function pathagarHtml(base: string): Plugin {
+function pathagarHtml(assetBase: string): Plugin {
   return {
     name: "pathagar-html",
     transformIndexHtml: {
       order: "post",
       handler(html, ctx) {
         if (ctx.server) return html.replace("connect-src ", "connect-src ws: ");
-        return html.replaceAll('href="icons/', `href="${base}icons/`);
+        return html.replaceAll('href="icons/', `href="${assetBase}icons/`);
       },
     },
   };

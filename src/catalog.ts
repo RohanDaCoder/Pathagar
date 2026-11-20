@@ -7,7 +7,7 @@ import { apiGet } from "./net";
 import type { Book, Chapter, ListResult, Snapshot } from "./types";
 import snapshotJson from "./catalog-snapshot.json";
 
-const SNAPSHOT = snapshotJson as unknown as Snapshot;
+const SNAPSHOT: Snapshot = snapshotJson;
 
 export function loadSnapshot(): Snapshot {
   S.snapshot ??= SNAPSHOT;
@@ -17,6 +17,7 @@ export function loadSnapshot(): Snapshot {
 const catCache = {
   get<T>(k: string): { t: number; v: T } | null {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary: entries are only ever written by set()
       return JSON.parse(localStorage.getItem(`ptg:${k}`) || "null") as {
         t: number;
         v: T;
@@ -50,13 +51,13 @@ export async function getBooks(
   branchId: number | string,
 ): Promise<ListResult<Book>> {
   try {
-    const d = (await apiGet("categories", {
+    const d = await apiGet<ApiEnvelope<Book>>("categories", {
       parent: branchId,
       limit: 200,
-    })) as ApiEnvelope<Book>;
-    const items = (d.data || [])
-      .slice()
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    });
+    const items = (d.data || []).toSorted(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    );
     catCache.set(`books:${branchId}`, items);
     return { items, stale: false };
   } catch (e) {
@@ -77,11 +78,12 @@ export async function getChapters(
     const items: Chapter[] = [];
     let page = 1;
     for (;;) {
-      const d = (await apiGet("books", {
+      // eslint-disable-next-line no-await-in-loop -- pagination must stay sequential
+      const d = await apiGet<ApiEnvelope<Chapter>>("books", {
         category: bookId,
         limit: 300,
         page,
-      })) as ApiEnvelope<Chapter>;
+      });
       const batch = d.data || [];
       items.push(...batch);
       const p = d.pagination || {};

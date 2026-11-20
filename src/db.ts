@@ -41,6 +41,7 @@ export const DB = {
   async putFile(id: string, buffer: Uint8Array, meta: ChapterMeta) {
     await tx(["files", "meta"], "readwrite", (t) => {
       t.objectStore("files").put(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS lib gap: Uint8Array<ArrayBufferLike> is a valid BlobPart at runtime
         new Blob([buffer as BlobPart], { type: "application/pdf" }),
         id,
       );
@@ -50,16 +51,16 @@ export const DB = {
   getFile: (id: string) =>
     tx<Blob | undefined>(["files"], "readonly", (t) =>
       t.objectStore("files").get(id),
-    ) as Promise<Blob | undefined>,
+    ),
   getMeta: (id: string) =>
     tx<ChapterMeta | undefined>(["meta"], "readonly", (t) =>
       t.objectStore("meta").get(id),
-    ) as Promise<ChapterMeta | undefined>,
+    ),
   async allMeta(): Promise<ChapterMeta[]> {
     const db = await open();
     return new Promise((resolve, reject) => {
       const r = db.transaction("meta").objectStore("meta").getAll();
-      r.onsuccess = () => resolve((r.result as ChapterMeta[]) || []);
+      r.onsuccess = () => resolve((r.result as ChapterMeta[]) || []); // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- the store only ever holds ChapterMeta
       r.onerror = () => reject(r.error);
     });
   },

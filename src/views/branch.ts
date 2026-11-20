@@ -8,6 +8,8 @@ import {
   esc,
   viewHead,
   crumbs,
+  errMessage,
+  errStatus,
   svgChev,
   svgWarn,
   svgOffline,
@@ -32,9 +34,8 @@ export async function renderBranch(branchId: string | undefined) {
   try {
     data = await getBooks(id);
   } catch (e) {
-    const err = e as Error & { status?: number };
     rows.innerHTML = `<div class="empty">${svgWarn}<div class="t">Couldn't load the list</div>
-      <div>${err.status === 403 ? "The API key seems to be revoked — set a new one in Settings." : esc(err.message || "Network problem")}</div>
+      <div>${errStatus(e) === 403 ? "The API key seems to be revoked — set a new one in Settings." : esc(errMessage(e) || "Network problem")}</div>
       <button class="btn soft sm" id="retrybtn">Try again</button></div>`;
     $("#retrybtn")?.addEventListener("click", () => renderBranch(branchId));
     return;

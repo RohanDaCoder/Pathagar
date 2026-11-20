@@ -10,29 +10,29 @@ a fully offline library, and a tag-based release system.
 |            |                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------- |
 | Repository | `RohanDaCoder/Pathagar` — the in-app updater looks for new versions in its Releases   |
-| App ID     | `com.pathagar.app`                                                                    |
+| App ID     | `me.rohandacoder.pathagar`                                                            |
 | Web shell  | ~68 KB app code + 305 KB lazy pdf.js (1.1 MB worker, precached) · APK ~3.5 MB         |
 | Data       | 4 branches · 73 books · 1,247 chapters (SSC 2028, Madrasah, English Version, old set) |
 | Storage    | IndexedDB — downloaded chapters read without internet                                 |
 
 ## Toolchain
 
-**bun 1.4.5** is the package manager, runtime, typechecker, formatter and test
-runner; **vite 8** builds (and serves) the web app; **TypeScript 7** with
+**bun** (1.4.6 line, pinned in CI) is the package manager, runtime, typechecker,
+formatter, linter and test runner; **vite 8** builds (and serves) the web app; **TypeScript 7** with
 `strict` across the board. Capacitor 6 wraps the same `dist/` build into the
 Android app.
 
-| Task        | Command                                                                     |
-| ----------- | --------------------------------------------------------------------------- |
-| Install     | `bun install`                                                               |
-| Dev server  | `bun run dev` (with `/pdf/*` proxy)                                         |
-| Type check  | `bun check` (native, all cores)                                             |
-| Format      | `bun fmt` / `bun fmt --check`                                               |
-| Lint        | `bun run lint` (Biome)                                                      |
-| Test        | `bun test`                                                                  |
-| Build       | `bun run build` → `dist/`                                                   |
-| Serve build | `bun run serve` (static + PDF proxy)                                        |
-| Full gate   | `bun check && bun fmt --check && bun run lint && bun test && bun run build` |
+| Task        | Command                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| Install     | `bun install`                                                           |
+| Dev server  | `bun run dev` (with `/pdf/*` proxy)                                     |
+| Type check  | `bun check` (native, all cores)                                         |
+| Format      | `bun fmt` / `bun fmt --check`                                           |
+| Lint        | `bun lint` (built-in, strict)                                           |
+| Test        | `bun test`                                                              |
+| Build       | `bun run build` → `dist/`                                               |
+| Serve build | `bun run serve` (static + PDF proxy)                                    |
+| Full gate   | `bun check && bun fmt --check && bun lint && bun test && bun run build` |
 
 There is no Python anywhere in the project — the old dev proxy became the
 vite dev-server proxy, and `scripts/serve.ts` (Bun) serves production builds
@@ -94,7 +94,7 @@ works on branches and sends PRs.
 ```bash
 git switch -c feat/<name>
 # …edit src/…
-bun check && bun fmt && bun run lint && bun test && bun run build   # the CI gate, locally
+bun check && bun fmt --check && bun lint && bun test && bun run build  # the CI gate, locally
 git add -A && git commit -m "feat: …"
 git push -u origin feat/<name>
 gh pr create --fill

@@ -1,8 +1,9 @@
 /* main.ts — composition root: router wiring, view dispatcher, SW, guards */
+// eslint-disable-next-line import/no-unassigned-import -- css side-effect import (vite)
 import "./app.css";
 import { registerSW } from "virtual:pwa-register";
 import { NATIVE, S, applyTheme } from "./config";
-import { $, $$, svgWarn, esc } from "./utils";
+import { $, $$, svgWarn, esc, errMessage } from "./utils";
 import { loadSnapshot } from "./catalog";
 import { DL } from "./dlqueue";
 import { parseHash, initRouter, go } from "./router";
@@ -39,20 +40,20 @@ async function render() {
     const view = $("#view");
     if (view)
       view.innerHTML = `<div class="empty">${svgWarn}<div class="t">Something went wrong</div>
-      <div>${esc((e as Error).message || "")}</div></div>`;
+      <div>${esc(errMessage(e))}</div></div>`;
   }
 }
 
 applyTheme();
-(async () => {
+void (async () => {
   loadSnapshot();
   if (!location.hash) location.hash = "#/home";
   S.route = parseHash();
-  render();
+  void render();
 })();
 initRouter((route) => {
   S.route = route;
-  render();
+  void render();
 });
 
 /* PWA service worker — web + http(s) only (Capacitor serves its own copy) */
@@ -61,7 +62,7 @@ if (
   !NATIVE &&
   location.protocol.startsWith("http")
 ) {
-  registerSW({ immediate: true });
+  void registerSW({ immediate: true });
 }
 
 /* don't close the tab while downloads are running */

@@ -21,10 +21,10 @@ export function pdfFetchUrl(url: string): string {
   return m ? (p.endsWith("/") ? p : `${p}/`) + m[1] : url;
 }
 
-export async function apiGet(
+export async function apiGet<T>(
   path: string,
   params: Record<string, string | number> = {},
-): Promise<unknown> {
+): Promise<T> {
   const url = new URL(S.settings.apiUrl.replace(/\/?$/, "/") + path);
   url.searchParams.set("key", S.settings.apiKey);
   for (const [k, v] of Object.entries(params))
@@ -35,11 +35,13 @@ export async function apiGet(
       responseType: "json",
     });
     if (r.status >= 400) throw new ApiError(r.status);
-    return r.data;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- API boundary: the caller owns the shape
+    return r.data as T;
   }
   const r = await fetch(url.toString());
   if (!r.ok) throw new ApiError(r.status);
-  return r.json();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- API boundary: the caller owns the shape
+  return (await r.json()) as T;
 }
 
 function b64ToU8(b64: string): Uint8Array {
@@ -97,6 +99,7 @@ async function nativeDownload(
     for (let start = 0; start < total; start += CHUNK) {
       if (isCancelled()) throw new DOMException("aborted", "AbortError");
       const end = Math.min(start + CHUNK, total) - 1;
+      // eslint-disable-next-line no-await-in-loop -- ranged chunks must arrive in order
       const r = await CapacitorHttp.request({
         method: "GET",
         url,
@@ -143,6 +146,7 @@ async function webDownload(
   const parts: Uint8Array[] = [];
   let got = 0;
   for (;;) {
+    // eslint-disable-next-line no-await-in-loop -- a stream must be read sequentially
     const { done, value } = await reader.read();
     if (done) break;
     parts.push(value);

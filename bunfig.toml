@@ -1,0 +1,23 @@
+# Bun runtime configuration — https://bun.com/docs/runtime/bunfig
+#
+# Linting — strict profile. Requires bun >= 1.4.6 (the built-in linter); CI
+# pins the exact version.
+#
+#   correctness (bun default) + suspicious + perf are errors.
+#   The wholesale style/pedantic categories stay off: they enforce
+#   formatting-level opinions already covered by `bun fmt` + `bun check`, or
+#   rules that fight idiomatic Bun/TS code here (no-magic-numbers on named
+#   constants, sort-vars, func-style, prefer-readonly-parameter-types,
+#   strict-boolean-expressions, import/no-nodejs-modules in a Bun runtime…).
+#   Type-only imports are enforced by tsconfig's verbatimModuleSyntax instead.
+[lint]
+ignorePatterns = ["skills/"] # vendored agent-skills reference material
+
+[lint.rules]
+"unicorn/prefer-add-event-listener" = "off" # IDBTransaction/IDBRequest only expose on* properties
+"@typescript-eslint/no-unnecessary-type-parameters" = "off" # single-use generics are the API of $<T>() / cache.get<T>()
+
+[lint.categories]
+correctness = "error" # real bugs (bun default)
+suspicious = "error" # code that is probably wrong
+perf = "error" # a faster equivalent exists
