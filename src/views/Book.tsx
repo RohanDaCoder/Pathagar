@@ -37,7 +37,7 @@ import { DL } from "@/dlqueue";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
 import { errMessage } from "@/lib/errors";
-import { bookCore, isMcqBook, parseBookName, toBn } from "@/lib/titles";
+import { parseBookName, stripLeadNum, toBn } from "@/lib/titles";
 import type { Book, Chapter, ListResult } from "@/types";
 
 function SectionLabel({ text }: { text: string }) {
@@ -83,13 +83,14 @@ function buildRows(chs: Chapter[], bk: Book): Row[] {
   return rows;
 }
 
-/** parent display: the first part's title without its "— অংশ N" suffix
-    ("২. সেট ও ফাংশন — অংশ ১" → "২. সেট ও ফাংশন") */
+/** parent display: the first part's title without its "— অংশ N" suffix or
+    its leading chapter number ("২. সেট ও ফাংশন — অংশ ১" → "সেট ও ফাংশন") */
 function parentTitle(parts: Chapter[]): string {
   const d = parts[0]?.display || "";
-  return (
-    d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim() || parts[0]?.label || "Chapter"
+  const stripped = stripLeadNum(
+    d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim(),
   );
+  return stripped || parts[0]?.label || "Chapter";
 }
 
 export function Book() {
@@ -117,31 +118,7 @@ export function Book() {
   const branchLabel = snap.branches.find((b) => b.id === branchId)?.label || "";
   const majorNum = majorParam !== undefined ? Number(majorParam) : null;
 
-  /* the MCQ twin of this book — same branch, same subject core, MCQ upload */
-  let mcqId: string | null = null;
-  let mcqName: string | null = null;
-  if (!majorNum && bookName && !isMcqBook(bookName)) {
-    const core = bookCore(bookName);
-    for (const b of snap.branches) {
-      if (branchId && b.id !== branchId) continue;
-      const f = b.books.find(
-        (x) =>
-          String(x.id) !== bookId &&
-          isMcqBook(x.name) &&
-          bookCore(x.name) === core,
-      );
-      if (f) {
-        mcqId = String(f.id);
-        mcqName = f.name;
-        break;
-      }
-    }
-  }
-
-  const [data, setData] = useState<{
-    main: ListResult<Chapter>;
-    mcq?: { book: Book; items: Chapter[] };
-  } | null>(null);
+  const [data, setData] = useState<ListResult<Chapter> | null>(null);
   const [error, setError] = useState<{ title: string; detail?: string } | null>(
     null,
   );
@@ -154,29 +131,15 @@ export function Book() {
     let cancelled = false;
     void (async () => {
       try {
-        const [chapters, mcqChapters, metas] = await Promise.all([
+        const [chapters, metas] = await Promise.all([
           getChapters(bookId),
-          mcqId ? getChapters(mcqId) : Promise.resolve(null),
           DB.allMeta(),
         ]);
         if (cancelled) return;
-        const mine = metas.filter(
-          (m) => m.bookId === bookId || (mcqId !== null && m.bookId === mcqId),
-        );
+        const mine = metas.filter((m) => m.bookId === bookId);
         setSaved(new Set(mine.map((m) => m.id)));
         setSizes(Object.fromEntries(mine.map((m) => [m.id, m.size || 0])));
-        setData({
-          main: chapters,
-          mcq:
-            mcqId && mcqChapters
-              ? {
-                  book: { id: mcqId, name: mcqName || "Book", branchId },
-                  items: mcqChapters.items.filter(
-                    (c) => c.kind !== "front" && c.kind !== "back",
-                  ),
-                }
-              : undefined,
-        });
+        setData(chapters);
       } catch (e) {
         if (!cancelled)
           setError({
@@ -189,10 +152,10 @@ export function Book() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- reload is an intentional refetch trigger
-  }, [bookId, mcqId, mcqName, branchId, reload]);
+  }, [bookId, reload]);
 
   const book = { id: bookId, name: bookName || "Book", branchId };
-  const items = data?.main.items ?? [];
+  const items = data?.items ?? [];
   const done = items.filter(
     (ch) =>
       saved.has(String(ch.id)) || S.dl.get(String(ch.id))?.status === "done",
@@ -218,7 +181,6 @@ export function Book() {
   const chapters = items.filter((c) => c.kind !== "front" && c.kind !== "back");
   const extras = items.filter((c) => c.kind === "back");
   const mainRows = buildRows(chapters, book);
-  const mcqRows = data?.mcq ? buildRows(data.mcq.items, data.mcq.book) : [];
   const parts =
     majorNum !== null
       ? chapters.filter(
@@ -340,7 +302,7 @@ export function Book() {
           ) : null}
 
           <div className="grid gap-2">
-            {data.main.stale ? (
+            {data.stale ? (
               <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
                 <WifiOff className="size-4 shrink-0" aria-hidden="true" />
                 Offline — saved list
@@ -352,10 +314,6 @@ export function Book() {
               </p>
             ) : (
               <>
-                {mcqRows.length ? <SectionLabel text="MCQ" /> : null}
-                {mcqRows.map((r) =>
-                  r.t === "grp" ? groupRow(r) : chapterRow(r.ch, r.book),
-                )}
                 {fronts.length ? <SectionLabel text="Contents" /> : null}
                 {fronts.map((ch) => chapterRow(ch, book))}
                 {mainRows.length ? <SectionLabel text="Chapters" /> : null}
@@ -400,7 +358,7 @@ export function Book() {
         }}
       >
         <span
-          className="flex h-9 min-w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 px-2 text-sm font-bold tabular-nums text-primary"
+          className="flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 px-2 text-base font-bold tabular-nums text-primary"
           aria-hidden="true"
         >
           {toBn(ch.num ?? "·")}
@@ -455,26 +413,21 @@ export function Book() {
         onClick={() => void navigate(`/book/${g.book.id}/part/${g.major}`)}
       >
         <span
-          className="flex h-9 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
+          className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
           aria-hidden="true"
         >
-          <span className="text-[10px] font-medium leading-none opacity-80">
+          <span className="text-[11px] font-medium leading-none opacity-80">
             {word}
           </span>
-          <span className="text-sm font-bold leading-tight">
+          <span className="text-base font-bold leading-tight">
             {toBn(g.major)}
           </span>
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{parentTitle(g.parts)}</p>
-          <p className="text-xs text-muted-foreground">
-            {g.parts.length} parts
-            {savedCount === g.parts.length
-              ? " · ✓ saved"
-              : savedCount
-                ? ` · ${savedCount}/${g.parts.length} saved`
-                : ""}
-          </p>
+          {savedCount === g.parts.length ? (
+            <p className="text-xs text-muted-foreground">✓ Saved</p>
+          ) : null}
         </div>
         <ChevronRight
           className="size-5 shrink-0 text-muted-foreground"
@@ -491,7 +444,8 @@ export function Book() {
     const isDownloading = st?.status === "downloading";
     const isQueued = st?.status === "queued";
     const isError = st?.status === "error";
-    const title = ch.display || ch.title || "Chapter";
+    const raw = ch.display || ch.title || "Chapter";
+    const title = stripLeadNum(raw) || raw;
     return (
       <Card
         key={id}
@@ -512,15 +466,15 @@ export function Book() {
         }}
       >
         <span
-          className="flex h-9 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
+          className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
           aria-hidden="true"
         >
           {ch.label ? (
             <>
-              <span className="text-[10px] font-medium leading-none opacity-80">
+              <span className="text-[11px] font-medium leading-none opacity-80">
                 {ch.label.split(" ")[0]}
               </span>
-              <span className="text-sm font-bold leading-tight">
+              <span className="text-base font-bold leading-tight">
                 {ch.label.split(" ").slice(1).join(" ") || "·"}
               </span>
             </>

@@ -93,14 +93,9 @@ export function Home() {
         ))}
       </div>
 
-      <footer className="mt-4 space-y-1 text-center text-xs text-muted-foreground">
+      <footer className="mt-4 text-center text-xs text-muted-foreground">
         <p>
-          {APP_NAME} v{APP_VERSION} — download chapters and read them without
-          internet.
-        </p>
-        <p>
-          Source: open catalog of the “Class 9 All Subject Books” app (for
-          students’ personal use).
+          {APP_NAME} v{APP_VERSION}
         </p>
       </footer>
     </div>

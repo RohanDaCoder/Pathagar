@@ -19,7 +19,7 @@ import { S } from "@/config";
 import { DL } from "@/dlqueue";
 import { useDlVersion } from "@/hooks/useDlVersion";
 import { fmtMB } from "@/lib/format";
-import { parseBookName } from "@/lib/titles";
+import { parseBookName, stripLeadNum } from "@/lib/titles";
 
 function fmtSpeed(bytesPerSec: number): string {
   if (!bytesPerSec || bytesPerSec < 1) return "—";
@@ -94,11 +94,6 @@ export function DownloadsDialog({
           <DialogTitle className="flex items-center gap-2 text-base">
             <Download className="size-4" aria-hidden="true" />
             Downloads
-            {stats.speed ? (
-              <span className="ml-auto text-xs font-normal tabular-nums text-muted-foreground">
-                {fmtSpeed(stats.speed)}
-              </span>
-            ) : null}
           </DialogTitle>
           <DialogDescription className="sr-only">
             Active, queued and finished chapter downloads
@@ -113,8 +108,9 @@ export function DownloadsDialog({
           ) : (
             <ul className="divide-y">
               {rows.map(({ id, job, st }) => {
-                const title =
+                const raw =
                   job.chapter.display || job.chapter.title || "Chapter";
+                const title = stripLeadNum(raw) || raw;
                 const isDone = st!.status === "done";
                 const isError = st!.status === "error";
                 const isDl = st!.status === "downloading";
