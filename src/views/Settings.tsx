@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { Badge } from "@/components/ui/badge";
 import {
   NATIVE,
@@ -44,6 +46,8 @@ export function Settings() {
   const [updState, setUpdState] = useState<UpdState>("idle");
   const [est, setEst] =
     useState<Awaited<ReturnType<typeof storageEstimate>>>(null);
+  const [expert, setExpert] = useState(st.expertMode);
+  const { canInstall, install } = useInstallPrompt();
 
   useEffect(() => {
     void storageEstimate().then(setEst);
@@ -86,119 +90,123 @@ export function Settings() {
       <h1 className="mb-4 text-xl font-bold">Settings</h1>
 
       <form onSubmit={applyAndTest} className="grid gap-4">
-        <fieldset className="grid gap-3">
-          <legend className="mb-1 text-sm font-semibold">Connection</legend>
-          <Card className="grid gap-4 p-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="s-api">API URL</Label>
-              <Input
-                id="s-api"
-                name="apiUrl"
-                type="url"
-                spellCheck={false}
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                aria-describedby="s-api-help"
-              />
-              <p id="s-api-help" className="text-xs text-muted-foreground">
-                The original app's backend (Laravel).
-              </p>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="s-key">API key</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="s-key"
-                  name="apiKey"
-                  type={showKey ? "text" : "password"}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  aria-describedby="s-key-help"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowKey((v) => !v)}
-                >
-                  {showKey ? "Hide" : "Show"}
-                </Button>
-              </div>
-              <p id="s-key-help" className="text-xs text-muted-foreground">
-                If the key changes (403 errors), extract the new key from the
-                latest APK and paste it here.
-              </p>
-            </div>
-            <div>
-              <Button type="submit" disabled={testing}>
-                {testing ? "Testing…" : "Save & test"}
-              </Button>
-            </div>
-          </Card>
-        </fieldset>
-
-        {!NATIVE ? (
-          <fieldset className="grid gap-3">
-            <legend className="mb-1 text-sm font-semibold">
-              Web proxy (PDF)
-            </legend>
-            <Card className="grid gap-4 p-4">
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Use proxy</p>
-                  <p className="text-xs text-muted-foreground">
-                    The PDF server has no CORS — files are fetched through
-                    Netlify's <code>/pdf/*</code> reverse proxy.
+        {expert ? (
+          <>
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-semibold">Connection</legend>
+              <Card className="grid gap-4 p-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="s-api">API URL</Label>
+                  <Input
+                    id="s-api"
+                    name="apiUrl"
+                    type="url"
+                    spellCheck={false}
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    aria-describedby="s-api-help"
+                  />
+                  <p id="s-api-help" className="text-xs text-muted-foreground">
+                    The original app's backend (Laravel).
                   </p>
                 </div>
-                <input
-                  id="s-proxy"
-                  name="useProxy"
-                  type="checkbox"
-                  className="size-4 accent-(--color-primary) md:size-4"
-                  checked={proxyOn}
-                  onChange={(e) => setProxyOn(e.target.checked)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="s-pp">Proxy path</Label>
-                <Input
-                  id="s-pp"
-                  name="proxyPrefix"
-                  spellCheck={false}
-                  value={proxyPrefix}
-                  onChange={(e) => setProxyPrefix(e.target.value)}
-                />
-              </div>
-            </Card>
-          </fieldset>
-        ) : null}
-
-        <fieldset className="grid gap-3">
-          <legend className="mb-1 text-sm font-semibold">Downloads</legend>
-          <Card className="p-4">
-            <RadioGroup
-              name="concurrency"
-              value={String(st.concurrency)}
-              onValueChange={(v) => {
-                S.settings.concurrency = Number.parseInt(v, 10) || 2;
-                saveSettings();
-              }}
-              className="grid grid-cols-4 gap-2"
-            >
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="flex items-center gap-2">
-                  <RadioGroupItem value={String(n)} id={`s-conc-${n}`} />
-                  <Label htmlFor={`s-conc-${n}`}>{n}</Label>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="s-key">API key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="s-key"
+                      name="apiKey"
+                      type={showKey ? "text" : "password"}
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      aria-describedby="s-key-help"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowKey((v) => !v)}
+                    >
+                      {showKey ? "Hide" : "Show"}
+                    </Button>
+                  </div>
+                  <p id="s-key-help" className="text-xs text-muted-foreground">
+                    If the key changes (403 errors), extract the new key from
+                    the latest APK and paste it here.
+                  </p>
                 </div>
-              ))}
-            </RadioGroup>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Chapters downloaded at the same time.
-            </p>
-          </Card>
-        </fieldset>
+                <div>
+                  <Button type="submit" disabled={testing}>
+                    {testing ? "Testing…" : "Save & test"}
+                  </Button>
+                </div>
+              </Card>
+            </fieldset>
+
+            {!NATIVE ? (
+              <fieldset className="grid gap-3">
+                <legend className="mb-1 text-sm font-semibold">
+                  Web proxy (PDF)
+                </legend>
+                <Card className="grid gap-4 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">Use proxy</p>
+                      <p className="text-xs text-muted-foreground">
+                        The PDF server has no CORS — files are fetched through
+                        Netlify's <code>/pdf/*</code> reverse proxy.
+                      </p>
+                    </div>
+                    <input
+                      id="s-proxy"
+                      name="useProxy"
+                      type="checkbox"
+                      className="size-4 accent-(--color-primary) md:size-4"
+                      checked={proxyOn}
+                      onChange={(e) => setProxyOn(e.target.checked)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="s-pp">Proxy path</Label>
+                    <Input
+                      id="s-pp"
+                      name="proxyPrefix"
+                      spellCheck={false}
+                      value={proxyPrefix}
+                      onChange={(e) => setProxyPrefix(e.target.value)}
+                    />
+                  </div>
+                </Card>
+              </fieldset>
+            ) : null}
+
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-semibold">Downloads</legend>
+              <Card className="p-4">
+                <RadioGroup
+                  name="concurrency"
+                  value={String(st.concurrency)}
+                  onValueChange={(v) => {
+                    S.settings.concurrency = Number.parseInt(v, 10) || 2;
+                    saveSettings();
+                  }}
+                  className="grid grid-cols-4 gap-2"
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="flex items-center gap-2">
+                      <RadioGroupItem value={String(n)} id={`s-conc-${n}`} />
+                      <Label htmlFor={`s-conc-${n}`}>{n}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Chapters downloaded at the same time.
+                </p>
+              </Card>
+            </fieldset>
+          </>
+        ) : null}
 
         <fieldset className="grid gap-3">
           <legend className="mb-1 text-sm font-semibold">Appearance</legend>
@@ -229,6 +237,55 @@ export function Settings() {
           </Card>
         </fieldset>
       </form>
+
+      <fieldset className="mt-4 grid gap-3">
+        <legend className="mb-1 text-sm font-semibold">Expert mode</legend>
+        <Card className="flex items-start gap-3 p-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Show technical settings</p>
+            <p className="text-xs text-muted-foreground">
+              API URL, API key, the web PDF proxy and download concurrency.
+              Leave this off unless you know you need it — a wrong setting can
+              stop downloads from working.
+            </p>
+          </div>
+          <Switch
+            checked={expert}
+            onCheckedChange={(v) => {
+              setExpert(v);
+              S.settings.expertMode = v;
+              saveSettings();
+            }}
+            aria-label="Show technical settings"
+          />
+        </Card>
+      </fieldset>
+
+      {canInstall ? (
+        <fieldset className="mt-4 grid gap-3">
+          <legend className="mb-1 text-sm font-semibold">Install app</legend>
+          <Card className="flex items-center gap-3 p-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Add to home screen</p>
+              <p className="text-xs text-muted-foreground">
+                Full-screen, offline, with your downloaded library.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                void (async () => {
+                  const outcome = await install();
+                  if (outcome === "accepted")
+                    toast.success("Pathagar was installed");
+                })();
+              }}
+            >
+              Install
+            </Button>
+          </Card>
+        </fieldset>
+      ) : null}
 
       <fieldset className="mt-4 grid gap-3">
         <legend className="mb-1 text-sm font-semibold">App update</legend>

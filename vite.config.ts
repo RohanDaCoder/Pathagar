@@ -62,6 +62,7 @@ export default defineConfig({
       injectRegister: null, // registered manually in src/main.ts (skipped inside Capacitor)
       includeAssets: ["icons/favicon.png", "icons/apple-touch-icon.png"],
       manifest: {
+        id: base, // stable app identity for installs (see install-web-app guide)
         name: "Pathagar — Class 9-10 Guide",
         short_name: "Pathagar",
         description:

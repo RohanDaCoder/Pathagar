@@ -14,6 +14,7 @@ export interface Settings {
   proxyEnabled: boolean; // native downloads directly (no CORS in native http)
   theme: string;
   concurrency: number;
+  expertMode: boolean; // shows technical settings (API, proxy, concurrency)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   proxyEnabled: !NATIVE,
   theme: "auto",
   concurrency: 2,
+  expertMode: false,
 };
 
 /* localStorage is absent under `bun test` and can throw in private mode */
