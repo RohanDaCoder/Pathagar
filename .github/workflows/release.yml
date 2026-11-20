@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21" # Capacitor 8 targets Java 21 bytecode
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: platform-tools # legacy 'tools' package was removed from the SDK repo
