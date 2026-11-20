@@ -4,7 +4,7 @@
   "branches": [
     {
       "id": 18203,
-      "label": "জেনারেলের গাইড (General Guide, SSC 2028)",
+      "label": "Bangla Version (SSC 2028)",
       "total_chapters": 548,
       "books": [
         {
@@ -5233,8 +5233,8 @@
         },
         {
           "id": 182442,
-          "name": "বাংলা 2nd পত্র গাইড (SSC 2028)",
-          "cleanName": "বাংলা 2nd পত্র গাইড",
+          "name": "বাংলা ২য় পত্র গাইড (SSC 2028)",
+          "cleanName": "বাংলা ২য় পত্র",
           "tags": ["SSC 2028"],
           "order": 33,
           "chapters": 1,

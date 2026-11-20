@@ -74,6 +74,18 @@ export interface ApiEnvelope<T> {
   pagination?: { total_page?: string | number };
 }
 
+/* Upload-side name fixes applied to every path (API, localStorage cache,
+   snapshot) so display names stay consistent. Keep in sync with
+   NAME_FIXES in scripts/make-snapshot.ts. */
+const NAME_FIXES: Record<string, string> = {
+  "বাংলা 2nd পত্র গাইড (SSC 2028)": "বাংলা ২য় পত্র গাইড (SSC 2028)",
+};
+
+const fixBookNames = (books: Book[]): Book[] =>
+  books.map((b) =>
+    NAME_FIXES[b.name] ? { ...b, name: NAME_FIXES[b.name] } : b,
+  );
+
 export async function getBooks(
   branchId: number | string,
 ): Promise<ListResult<Book>> {
@@ -82,14 +94,14 @@ export async function getBooks(
       parent: branchId,
       limit: 200,
     });
-    const items = (d.data || []).toSorted(
-      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    const items = fixBookNames(
+      (d.data || []).toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     );
     catCache.set(`books:${branchId}`, items);
     return { items, stale: false };
   } catch (e) {
     const c = catCache.get<Book[]>(`books:${branchId}`);
-    if (c) return { items: c.v, stale: true };
+    if (c) return { items: fixBookNames(c.v), stale: true };
     const snap = loadSnapshot();
     const b = snap.branches.find((x) => x.id === Number(branchId));
     if (b) return { items: b.books, stale: true };
