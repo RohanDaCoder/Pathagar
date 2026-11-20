@@ -11,9 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      # bun 1.4.6 line (built-in linter). Canary builds are npm-only — there is
+      # no GitHub release for setup-bun to fetch — so install the exact version
+      # via npm. Flip back to oven-sh/setup-bun once 1.4.6 is on npm stable.
+      - run: npm install -g bun@1.4.5-canary.20261119.1
+      - name: Cache bun installs
+        uses: actions/cache@v4
         with:
-          bun-version: 1.4.5-canary.20261119.1 # 1.4.6 line: ships the built-in linter; cache enabled by default, keyed on bun.lock
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-install-${{ runner.os }}-
 
       - run: bun install --frozen-lockfile
       - run: bun check # native typecheck (same errors as tsc, all cores)
@@ -33,9 +40,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      # bun 1.4.6 line (built-in linter) — see the web job note
+      - run: npm install -g bun@1.4.5-canary.20261119.1
+      - name: Cache bun installs
+        uses: actions/cache@v4
         with:
-          bun-version: 1.4.5-canary.20261119.1
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-install-${{ runner.os }}-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
