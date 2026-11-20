@@ -31,7 +31,7 @@ async function render() {
     }
   } catch (e) {
     console.error(e);
-    $('#view').innerHTML = `<div class="empty">${svgWarn}<div class="t">কিছু একটা সমস্যা হয়েছে</div>
+    $('#view').innerHTML = `<div class="empty">${svgWarn}<div class="t">Something went wrong</div>
       <div>${esc(e.message || '')}</div></div>`;
   }
 }

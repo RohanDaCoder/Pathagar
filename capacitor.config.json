@@ -1,6 +1,6 @@
 {
   "appId": "com.pathagar.app",
-  "appName": "পাঠাগার",
+  "appName": "Pathagar",
   "webDir": "www",
   "android": {
     "allowMixedContent": false

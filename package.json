@@ -1,8 +1,8 @@
 {
-  "name": "pathosongi",
-  "version": "1.0.0",
+  "name": "pathagar",
+  "version": "1.0.1",
   "private": true,
-  "description": "পাঠসঙ্গী — Class 9-10 guide book reader (web + Android, single codebase)",
+  "description": "Pathagar — Class 9-10 guide book reader (web + Android, single codebase)",
   "scripts": {
     "serve": "python3 ../scripts/local_proxy.py",
     "cap:sync": "npx cap sync android",

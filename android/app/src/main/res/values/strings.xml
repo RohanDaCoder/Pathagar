@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">পাঠাগার</string>
-    <string name="title_activity_main">পাঠাগার</string>
+    <string name="app_name">Pathagar</string>
+    <string name="title_activity_main">Pathagar</string>
     <string name="package_name">com.pathagar.app</string>
     <string name="custom_url_scheme">com.pathagar.app</string>
 </resources>

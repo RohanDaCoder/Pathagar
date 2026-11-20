@@ -15,7 +15,7 @@ function ensurePdfJs() {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
         resolve();
       };
-      s.onerror = () => reject(new Error('PDF ভিউয়ার লোড হয়নি'));
+      s.onerror = () => reject(new Error('PDF viewer failed to load'));
       document.head.appendChild(s);
     });
   }
@@ -59,31 +59,31 @@ export async function openReader(id) {
   id = String(id);
   let meta = null, blob = null;
   try { meta = await DB.getMeta(id); blob = await DB.getFile(id); } catch {}
-  if (!meta || !blob) { toast('ফাইলটি নেই — আগে ডাউনলোড করুন', 'err'); return; }
+  if (!meta || !blob) { toast('File not found — download it first', 'err'); return; }
   localStorage.setItem('ptg:lastRead', id);
   DB.updateMeta(id, { lastOpened: Date.now() }).catch(() => {});
   try { await ensurePdfJs(); } catch (e) { toast(e.message, 'err'); return; }
   const rd = $('#reader');
   rd.innerHTML = `
     <div class="rbar">
-      <button id="rclose" title="বন্ধ করুন"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button id="rclose" title="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
       <div class="rtitle">${esc(meta.title)} · ${esc(meta.bookName || '')}</div>
-      <button id="rzout" title="ছোট করুন">−</button>
-      <button id="rzin" title="বড় করুন">+</button>
-      ${NATIVE ? '' : '<button id="ropen" title="নতুন ট্যাবে খুলুন">⤢</button>'}
+      <button id="rzout" title="Zoom out">−</button>
+      <button id="rzin" title="Zoom in">+</button>
+      ${NATIVE ? '' : '<button id="ropen" title="Open in new tab">⤢</button>'}
     </div>
-    <div class="rwrap" id="rwrap"><div class="loading" id="rload"><span class="spinner"></span>&nbsp; PDF লোড হচ্ছে…</div><canvas id="rcanvas"></canvas></div>
+    <div class="rwrap" id="rwrap"><div class="loading" id="rload"><span class="spinner"></span>&nbsp; Loading PDF…</div><canvas id="rcanvas"></canvas></div>
     <div class="rnav">
-      <button id="rprev">‹ পূর্ববর্তী</button>
+      <button id="rprev">‹ Prev</button>
       <div class="pg" id="rpg">…</div>
-      <button id="rnext">পরবর্তী ›</button>
+      <button id="rnext">Next ›</button>
     </div>`;
   rd.classList.add('open');
   let doc;
   try {
     const data = new Uint8Array(await blob.arrayBuffer());
     doc = await window.pdfjsLib.getDocument({ data }).promise;
-  } catch (e) { toast('PDF খোলা যায়নি: ' + (e.message || ''), 'err'); closeReader(); return; }
+  } catch (e) { toast('Could not open PDF: ' + (e.message || ''), 'err'); closeReader(); return; }
   if (!rd.classList.contains('open')) { doc.destroy?.(); return; } // closed meanwhile
   R = { doc, page: 1, scale: 0, fit: 0, id, meta, task: null, taskId: 0 };
   await renderPdfPage();

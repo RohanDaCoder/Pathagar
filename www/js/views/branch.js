@@ -9,33 +9,33 @@ export async function renderBranch(branchId) {
   branchId = parseInt(branchId, 10);
   const snap = await loadSnapshot();
   const meta = snap.branches.find(b => b.id === branchId);
-  const label = meta?.label || 'গাইড';
-  $('#view').innerHTML = `<div class="page">${viewHead(label, 'বই বাছাই করুন')}
+  const label = meta?.label || 'Guide';
+  $('#view').innerHTML = `<div class="page">${viewHead(label, 'Pick a book')}
     ${crumbs(label)}<div class="list" id="rows"></div></div>`;
   const rows = $('#rows');
   rows.innerHTML = '<div class="sk"></div>'.repeat(6);
   let data;
   try { data = await getBooks(branchId); } catch (e) {
-    rows.innerHTML = `<div class="empty">${svgWarn}<div class="t">তালিকা আনা যায়নি</div>
-      <div>${e.status === 403 ? 'API কী বাতিল হয়েছে বলে মনে হচ্ছে — সেটিংসে নতুন কী দিন।' : esc(e.message || 'নেটওয়ার্ক সমস্যা')}</div>
-      <button class="btn soft sm" id="retrybtn">আবার চেষ্টা করুন</button></div>`;
+    rows.innerHTML = `<div class="empty">${svgWarn}<div class="t">Couldn't load the list</div>
+      <div>${e.status === 403 ? 'The API key seems to be revoked — set a new one in Settings.' : esc(e.message || 'Network problem')}</div>
+      <button class="btn soft sm" id="retrybtn">Try again</button></div>`;
     $('#retrybtn').onclick = () => renderBranch(branchId);
     return;
   }
   const savedByBook = {};
   (await DB.allMeta()).forEach(m => { savedByBook[m.bookId] = (savedByBook[m.bookId] || 0) + 1; });
-  rows.innerHTML = (data.stale ? `<div class="banner warn">${svgOffline} অফলাইন — সংরক্ষিত তালিকা দেখানো হচ্ছে</div>` : '') +
+  rows.innerHTML = (data.stale ? `<div class="banner warn">${svgOffline} Offline — showing the saved list</div>` : '') +
     (data.items.length ? data.items.map(bk => `
     <div class="row" data-book="${bk.id}">
       ${bk.image ? `<img class="cover" loading="lazy" src="${esc(bk.image)}" alt="">`
-                 : `<div class="cover">${esc((bk.name || 'বই').trim().charAt(0))}</div>`}
+                 : `<div class="cover">${esc((bk.name || 'Book').trim().charAt(0))}</div>`}
       <div class="rmain"><div class="rtitle">${esc(bk.name)}</div>
         <div class="rsub">
-          <span>${bn(meta?.books.find(x => x.id === bk.id)?.chapters ?? '…')} অধ্যায়</span>
-          ${savedByBook[bk.id] ? `<span class="chip ok">✓ ${bn(savedByBook[bk.id])} সেভ</span>` : ''}
+          <span>${bn(meta?.books.find(x => x.id === bk.id)?.chapters ?? '…')} chapters</span>
+          ${savedByBook[bk.id] ? `<span class="chip ok">✓ ${bn(savedByBook[bk.id])} saved</span>` : ''}
         </div></div>
       ${svgChev}
-    </div>`).join('') : `<div class="empty">${svgBookIco}<div class="t">এই শাখায় কোনো বই নেই</div></div>`);
+    </div>`).join('') : `<div class="empty">${svgBookIco}<div class="t">No books in this branch</div></div>`);
   $$('#rows .row').forEach(el => el.onclick = () => {
     const id = el.dataset.book;
     const name = $('.rtitle', el).textContent;

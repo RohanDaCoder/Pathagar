@@ -1,16 +1,16 @@
-## কী পরিবর্তন হয়েছে? / What changes?
+## What changes?
 
-<!-- কী কী ফাইল/ফিচার বদলেছে, কেন — সংক্ষেপে -->
+<!-- Which files/features changed, and why — briefly -->
 
-## পরীক্ষা / Testing
+## Testing
 
-- [ ] ওয়েব: `python3 scripts/local_proxy.py` → http://127.0.0.1:8123 — লিস্ট, ডাউনলোড, অফলাইন রিড
-- [ ] Android: `./gradlew assembleDebug` (বা রিলিজ হলে `assembleRelease`)
-- [ ] CI সবুজ হয়েছে
+- [ ] Web: `python3 scripts/local_proxy.py` → http://127.0.0.1:8123 — lists, download, offline read
+- [ ] Android: `./gradlew assembleDebug` (or `assembleRelease` for release changes)
+- [ ] CI is green
 
-## চেকলিস্ট / Checklist
+## Checklist
 
-- [ ] নতুন `.js` ফাইল যোগ হলে `www/sw.js` প্রিক্যাশ তালিকায় যোগ করা হয়েছে (CI যাচাই করবে)
-- [ ] `www/js/config.js`-এ `APP_VERSION` আপডেট প্রয়োজন হলে হয়েছে
-- [ ] কোনো কপিরাইটযুক্ত সামগ্রী (PDF/টেক্সট) রিপোতে যোগ হয়নি — শুধু কোড ও কনফিগ
-- [ ] ব্যক্তিগত-ব্যবহারের সীমা রক্ষিত (মিররিং/পুনরায় বিতরণ নয়)
+- [ ] Any new `.js` file was added to the `www/sw.js` precache list (CI verifies this)
+- [ ] `APP_VERSION` in `www/js/config.js` was bumped if needed
+- [ ] No copyrighted content (PDFs/text) was added to the repo — code and config only
+- [ ] Personal-use scope respected (no mirroring/redistribution)

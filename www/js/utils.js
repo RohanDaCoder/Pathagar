@@ -1,10 +1,11 @@
-/* utils.js — DOM helpers, Bengali formatting, toasts, shared SVG icons */
+/* utils.js — DOM helpers, number formatting, toasts, shared SVG icons */
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-const BN_DIGITS = { '0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯','.':'.' };
-export const bn = (n) => String(n).replace(/[0-9.]/g, d => BN_DIGITS[d] ?? d);
+/* kept the historical name `bn` (it used to render Bengali digits); the UI is
+   English now, so it passes values through unchanged */
+export const bn = (n) => String(n);
 export const fmtMB = (bytes) => bn((bytes / 1048576).toFixed(1)) + ' MB';
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
@@ -47,12 +48,12 @@ export const BRANCH_BG = { 18203: 'bg-1', 17786: 'bg-2', 17794: 'bg-3', 101: 'bg
 /* ---------- shared view fragments ---------- */
 export function viewHead(title, sub, brand = false) {
   return `<div class="page-head">${brand ? `
-    <div class="brandmark"><div class="logo">পা</div><div>
+    <div class="brandmark"><div class="logo">P</div><div>
       <h1>${esc(title)}</h1><div class="sub">${esc(sub)}</div>
     </div></div>` : `
     <h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}`}
   </div>`;
 }
 export function crumbs(branch) {
-  return `<div class="crumbs"><a href="#/home">হোম</a> ${svgChev} <span>${esc(branch)}</span></div>`;
+  return `<div class="crumbs"><a href="#/home">Home</a> ${svgChev} <span>${esc(branch)}</span></div>`;
 }
