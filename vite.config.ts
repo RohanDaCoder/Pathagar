@@ -4,6 +4,9 @@
    - vite-plugin-pwa generates the service worker (precache + API network-first),
      replacing the hand-maintained sw.js + its CI coverage check */
 import { defineConfig, type Plugin } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { resolve } from "node:path";
 import { VitePWA } from "vite-plugin-pwa";
 
 const PDF_UPSTREAM = "https://pdf.tetashweb.xyz";
@@ -33,6 +36,9 @@ function pathagarHtml(assetBase: string): Plugin {
 
 export default defineConfig({
   base,
+  resolve: {
+    alias: { "@": resolve(__dirname, "src") },
+  },
   build: {
     target: "es2022",
     outDir: "dist",
@@ -48,6 +54,8 @@ export default defineConfig({
     proxy: { "/pdf": pdfProxy },
   },
   plugins: [
+    react(),
+    tailwindcss(),
     pathagarHtml(base),
     VitePWA({
       registerType: "autoUpdate",

@@ -19,7 +19,7 @@ a fully offline library, and a tag-based release system.
 
 **bun** (1.4.6 line, pinned in CI) is the package manager, runtime, typechecker,
 formatter, linter and test runner; **vite 8** builds (and serves) the web app; **TypeScript 7** with
-`strict` across the board. Capacitor 6 wraps the same `dist/` build into the
+`strict` across the board. Capacitor 8 wraps the same `dist/` build into the
 Android app.
 
 | Task        | Command                                                                 |
@@ -42,23 +42,24 @@ locally.
 
 ```
 pathagar/
-├── index.html            ← vite entry: shell, CSP, bottom nav
-├── src/                  ← strict TypeScript, no framework, hash-routed
-│   ├── main.ts           ← composition root: router + view dispatch + SW registration
+├── index.html            ← vite entry (#root mount, CSP, color-scheme meta)
+├── src/                  ← React 19 + TypeScript (HashRouter, shadcn/ui, Tailwind 4)
+│   ├── main.tsx          ← React mount, theme, SW registration, DL→reader bridge
+│   ├── App.tsx           ← routes, bottom nav, error boundary, toasts
 │   ├── config.ts         ← platform detection, settings, global state (S)
 │   ├── types.ts          ← shared domain types
 │   ├── catalog.ts        ← API + localStorage cache + bundled snapshot (static import)
 │   ├── net.ts            ← fetch (web) / CapacitorHttp (native, 1 MiB ranged chunks)
 │   ├── db.ts             ← IndexedDB (files + meta stores)
 │   ├── dlqueue.ts        ← download manager (queue, concurrency, progress, cancel)
-│   ├── updater.ts        ← GitHub Releases check + semver compare
-│   ├── reader.ts         ← pdf.js viewer (npm pdfjs-dist@3.11, lazy chunk)
-│   ├── app.css           ← full stylesheet
-│   └── views/            ← home · branch · book · library · settings
+│   ├── reader/Reader.tsx ← pdf.js viewer (pdfjs-dist@6, lazy chunk)
+│   ├── views/            ← Home · Branch · Book · Library · Settings
+│   ├── components/ui/    ← shadcn/ui components (owned, Radix-based)
+│   └── lib/ + hooks/     ← errors, format, theme, storage; queue subscription
 ├── public/               ← icons, _redirects (copied verbatim to dist/)
 ├── scripts/serve.ts      ← Bun.serve: dist + /pdf proxy for local prod preview
-├── android/              ← Capacitor 6 project (webDir = dist)
-└── .github/workflows/    ← ci · release · netlify · pages
+├── android/              ← Capacitor 8 project (webDir = dist)
+└── .github/workflows/    ← ci · release · netlify · pages (+ dependabot)
 ```
 
 **Dependency direction:** `main.ts → views → {catalog, dlqueue, reader, utils}

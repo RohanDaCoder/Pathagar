@@ -15,7 +15,7 @@ export class ApiError extends Error {
 }
 
 export function pdfFetchUrl(url: string): string {
-  if (NATIVE || !S.settings.useProxyOnWeb) return url;
+  if (NATIVE || !S.settings.proxyEnabled) return url;
   const p = S.settings.proxyPrefix || "/pdf/";
   const m = url.match(/^https?:\/\/[^/]+\/(.*)$/);
   return m ? (p.endsWith("/") ? p : `${p}/`) + m[1] : url;
