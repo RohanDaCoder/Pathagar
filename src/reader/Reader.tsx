@@ -4,10 +4,12 @@
 
    Scaling: pages fit themselves to the viewport (fit-width by default,
    fit-page optional) and re-fit on resize/rotation. Zoom is real (pdf.js
-   re-render), driven by buttons, +/- keys, ctrl+wheel and pinch. The canvas
-   is `shrink-0 max-w-none` — a plain flex item gets visually squashed when
-   it is wider than its container, which is what made pages look distorted
-   on desktop before. */
+   re-render), driven by buttons, +/- keys, ctrl+wheel and pinch. The pinch
+   gesture is an isolated surface: it only resizes the canvas (the page
+   itself cannot zoom), the surrounding chrome never moves, and the crisp
+   re-render lands once on release. The canvas is `shrink-0 max-w-none` —
+   a plain flex item gets visually squashed when it is wider than its
+   container, which is what made pages look distorted on desktop before. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -72,6 +74,7 @@ export function Reader() {
   const [zoom, setZoom] = useState(0);
   const [fitMode, setFitMode] = useState<"width" | "page">("width");
   const [zoomPct, setZoomPct] = useState(0); // displayed % of current render
+  const lastPageRef = useRef(0); // detects page turns (scroll reset) vs zooms
   type FitMode = "width" | "page";
   const stateRef = useRef<{
     pageNum: number;
@@ -160,6 +163,7 @@ export function Reader() {
         docRef.current = doc;
         setPageNum(1);
         setZoom(0);
+        lastPageRef.current = 0; // new doc → the render effect scrolls to top
         stateRef.current = {
           pageNum: 1,
           zoom: 0,
@@ -186,7 +190,12 @@ export function Reader() {
     if (!docRef.current || loading) return;
     const eff = zoom || fitScale();
     void renderPage(pageNum, eff);
-    wrapRef.current?.scrollTo({ top: 0 });
+    /* scroll resets on page turns only — a zoom change (button, key or
+       pinch release) must keep the reader's position */
+    if (lastPageRef.current !== pageNum) {
+      lastPageRef.current = pageNum;
+      wrapRef.current?.scrollTo({ top: 0 });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- fitScale/renderPage are stable; refitting on identity change would loop renders
   }, [pageNum, zoom, fitMode, loading, fitScale, renderPage]);
 
@@ -250,53 +259,96 @@ export function Reader() {
     return () => wrap.removeEventListener("wheel", onWheel);
   }, [zoomBy]);
 
-  // touch: one finger swipes pages, two fingers pinch-zoom
+  // touch: the PDF area is its own pan/zoom surface. One finger pans (or
+  // swipes pages at fit zoom); two fingers pinch-zoom the canvas in place —
+  // the page itself can no longer zoom (user-scalable=no + no pinch-zoom
+  // token in touch-action), so the header/footer chrome stays put while
+  // only the PDF moves. During the gesture the canvas is only CSS-resized
+  // (smooth 60fps); the crisp pdf.js re-render happens once, on release.
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return undefined;
     const pointers = new Map<number, { x: number; y: number }>();
-    let swipeX: number | null = null;
     let swipeStart: { x: number; y: number } | null = null;
-    let pinchDist = 0;
-    let pinchZoom = 0;
+    let pinchStartDist = 0;
+    let pinchBaseZoom = 0; // absolute scale when the gesture began
+    let pinchRatio = 1;
+    let baseW = 0;
+    let baseH = 0;
+    let anchor: { x: number; y: number } | null = null; // canvas coords
 
     const dist = () => {
       const [a, b] = [...pointers.values()];
       return Math.hypot(a.x - b.x, a.y - b.y);
     };
+    const midpoint = () => {
+      const [a, b] = [...pointers.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+
+    const applyPinch = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !anchor) return;
+      const ratio = dist() / pinchStartDist;
+      const z = clampZoom(pinchBaseZoom * ratio);
+      pinchRatio = z / pinchBaseZoom;
+      canvas.style.width = `${Math.round(baseW * pinchRatio)}px`;
+      canvas.style.height = `${Math.round(baseH * pinchRatio)}px`;
+      /* keep the grabbed PDF point under the fingers */
+      const rect = canvas.getBoundingClientRect();
+      const mid = midpoint();
+      wrap.scrollLeft += rect.left + anchor.x * pinchRatio - mid.x;
+      wrap.scrollTop += rect.top + anchor.y * pinchRatio - mid.y;
+      setZoomPct(Math.round(z * 100));
+    };
+
+    const commitPinch = () => {
+      pinchStartDist = 0;
+      anchor = null;
+      const z = clampZoom(pinchBaseZoom * pinchRatio);
+      /* a no-op pinch must not lock in a manual zoom */
+      if (Math.abs(z - (stateRef.current.zoom || fitScale())) > 0.001)
+        setZoom(z); // re-renders at the same size — no visual jump
+    };
 
     const onStart = (e: PointerEvent) => {
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointers.size === 1) {
-        swipeX = e.clientX;
         swipeStart = { x: e.clientX, y: e.clientY };
       } else if (pointers.size === 2) {
-        swipeX = null;
-        pinchDist = dist();
-        pinchZoom = stateRef.current.zoom || fitScale();
-        wrap.setPointerCapture(e.pointerId);
+        swipeStart = null;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        pinchStartDist = dist();
+        pinchBaseZoom = stateRef.current.zoom || fitScale();
+        pinchRatio = 1;
+        baseW = canvas.offsetWidth;
+        baseH = canvas.offsetHeight;
+        const rect = canvas.getBoundingClientRect();
+        const mid = midpoint();
+        anchor = { x: mid.x - rect.left, y: mid.y - rect.top };
       }
     };
     const onMove = (e: PointerEvent) => {
       if (!pointers.has(e.pointerId)) return;
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointers.size === 2 && pinchDist > 0) {
-        const ratio = dist() / pinchDist;
-        setZoom(clampZoom(pinchZoom * ratio));
-      }
+      if (pointers.size === 2 && pinchStartDist) applyPinch();
     };
     const onEnd = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return;
       pointers.delete(e.pointerId);
-      if (pointers.size < 2) pinchDist = 0;
-      if (swipeX === null || swipeStart === null) return;
-      const dx = e.clientX - swipeStart.x;
-      const dy = e.clientY - swipeStart.y;
-      swipeX = null;
-      swipeStart = null;
-      if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-        if (dx < 0) setPageNum((p) => Math.min(p + 1, numPages));
-        else setPageNum((p) => Math.max(p - 1, 1));
+      if (pointers.size < 2 && pinchStartDist) commitPinch();
+      if (swipeStart === null) return;
+      /* page swipes only while at fit — a zoomed page must pan, not turn */
+      if (stateRef.current.zoom === 0) {
+        const dx = e.clientX - swipeStart.x;
+        const dy = e.clientY - swipeStart.y;
+        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          if (dx < 0) setPageNum((p) => Math.min(p + 1, numPages));
+          else setPageNum((p) => Math.max(p - 1, 1));
+        }
       }
+      swipeStart = null;
     };
     wrap.addEventListener("pointerdown", onStart);
     wrap.addEventListener("pointermove", onMove);
@@ -402,10 +454,12 @@ export function Reader() {
         </Button>
       </header>
 
+      {/* no pinch-zoom token: the browser must never page-zoom from here —
+          two-finger gestures belong to the pinch handler below */}
       <div
         ref={wrapRef}
         className="flex flex-1 justify-center overflow-auto bg-muted/30"
-        style={{ touchAction: "pan-x pan-y pinch-zoom" }}
+        style={{ touchAction: "pan-x pan-y" }}
       >
         {loading ? (
           <p className="pt-10 text-sm text-muted-foreground">Loading PDF…</p>

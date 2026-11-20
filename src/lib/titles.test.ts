@@ -189,7 +189,7 @@ describe("withMathNames — SSC-2028 গণিত guides upload nameless titles"
       "গণিত গাইড CQ (SSC 2028)",
       parseTitle("অধ্যায় - 2.1"),
     );
-    expect(p.display).toBe("২. সেট ও ফাংশন — অংশ ১");
+    expect(p.display).toBe("2. সেট ও ফাংশন — অংশ 1");
     expect(p.number).toBe(2.1);
   });
 
@@ -198,7 +198,7 @@ describe("withMathNames — SSC-2028 গণিত guides upload nameless titles"
       "গণিত গাইড MCQ (SSC 2028)",
       parseTitle("MCQ - অধ্যায় - 10"),
     );
-    expect(p.display).toBe("১০. দূরত্ব ও উচ্চতা");
+    expect(p.display).toBe("10. দূরত্ব ও উচ্চতা");
   });
 
   test("books with real names are untouched", () => {

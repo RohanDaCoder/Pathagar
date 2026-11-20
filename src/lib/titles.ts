@@ -465,9 +465,8 @@ export function withMathNames(bookName: string, p: ParsedTitle): ParsedTitle {
   const part = Math.round((p.number - major) * 10);
   return {
     ...p,
-    display: part
-      ? `${toBn(major)}. ${name} — অংশ ${toBn(part)}`
-      : `${toBn(major)}. ${name}`,
+    /* chapter numbers render in English numerals app-wide */
+    display: part ? `${major}. ${name} — অংশ ${part}` : `${major}. ${name}`,
   };
 }
 
