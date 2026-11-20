@@ -1,5 +1,7 @@
 /* types.ts — shared domain types */
 
+import type { ChapterKind, ParsedTitle } from "./lib/titles";
+
 export interface Branch {
   id: number;
   label: string;
@@ -16,11 +18,19 @@ export interface Book {
   branchId?: number; // set by the branch/book views when queuing downloads
 }
 
+/* Raw API chapter, enriched by the title parser adapter (lib/titles.ts).
+   `title` stays the raw API value; the parsed fields drive display & order. */
 export interface Chapter {
   id: number | string;
   title?: string;
   pdf: string;
   order?: number;
+  /* parsed (present on chapters from getChapters and the snapshot) */
+  num?: number | null;
+  label?: string | null;
+  display?: string;
+  pages?: [number, number] | null;
+  kind?: ChapterKind;
 }
 
 export interface ChapterMeta {
@@ -58,6 +68,8 @@ export interface DlState {
   abort?: AbortController;
   cancelled?: boolean;
   bookId?: string;
+  /** rolling speed estimate in bytes/s (set by the queue while downloading) */
+  speed?: number;
 }
 
 export interface UpdateInfo {
@@ -74,3 +86,5 @@ export interface BookCtx {
   name: string;
   branchId?: number;
 }
+
+export type { ParsedTitle, ChapterKind };
