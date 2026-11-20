@@ -1,0 +1,65 @@
+name: Release
+
+# Tag-based releases: push a tag `vX.Y.Z` -> signed APK + web bundle on GitHub Releases.
+# versionCode = major*10000 + minor*100 + patch (set on the release APK).
+# The in-app updater reads the "latest" release of this repo.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+      - run: npx cap sync android
+
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+
+      - name: Derive version from tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r MA MI PA <<< "$TAG"
+          VCODE=$((MA*10000 + MI*100 + PA))
+          echo "VERSION_NAME=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VCODE" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PversionName="$VERSION_NAME" -PversionCode="$VERSION_CODE"
+
+      - name: Package web bundle
+        run: cd www && zip -rq "../pathagar-web-v${VERSION_NAME}.zip" .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "পাঠাগার (Pathagar) v${VERSION_NAME}" \
+            --generate-notes \
+            "android/app/build/outputs/apk/release/app-release.apk#Pathagar-v${VERSION_NAME}.apk" \
+            "pathagar-web-v${VERSION_NAME}.zip"
