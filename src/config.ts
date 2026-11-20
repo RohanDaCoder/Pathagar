@@ -4,7 +4,7 @@ import type { BookCtx, DlState, Snapshot } from "./types";
 
 export const NATIVE = Capacitor.isNativePlatform();
 export const APP_NAME = "Pathagar";
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.2.0";
 export const REPO = "RohanDaCoder/Pathagar"; // releases feed the in-app updater
 
 export interface Settings {
