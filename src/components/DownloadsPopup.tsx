@@ -3,7 +3,7 @@
    network speed whenever jobs run; tapping it opens this popup with every
    job: per-chapter progress, MB moved, speed, ETA, cancel / retry. */
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useNavigate } from "react-router";
 import { AlertCircle, Check, Download, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -218,8 +218,34 @@ export function DownloadsDialog({
   );
 }
 
-/* one shared open-state so the floating pill, the Home shortcut and the Book
-   toolbar can all open the same popup */
+/* shared open-state as a tiny external store — the queue (main.ts) can close
+   the dialog directly when it auto-opens the reader, no DOM events involved */
+let dlOpen = false;
+const dlListeners = new Set<() => void>();
+function notify() {
+  for (const l of dlListeners) l();
+}
+export const dlDialog = {
+  open() {
+    if (!dlOpen) {
+      dlOpen = true;
+      notify();
+    }
+  },
+  close() {
+    if (dlOpen) {
+      dlOpen = false;
+      notify();
+    }
+  },
+};
 export function useDownloadsOpen(): [boolean, (o: boolean) => void] {
-  return useState(false);
+  const open = useSyncExternalStore(
+    (cb) => {
+      dlListeners.add(cb);
+      return () => dlListeners.delete(cb);
+    },
+    () => dlOpen,
+  );
+  return [open, (o) => (o ? dlDialog.open() : dlDialog.close())];
 }

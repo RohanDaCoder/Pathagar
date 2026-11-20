@@ -110,20 +110,13 @@ function Shell() {
   const hasLast = Boolean(localStorage.getItem("ptg:lastRead"));
   const [dlOpen, setDlOpen] = useDownloadsOpen();
 
-  /* the downloads popup opens itself when a download is launched … */
+  /* the downloads popup opens itself when a download is launched (the queue
+     closes it again when it auto-opens the reader — see main.ts) */
   useEffect(() => {
     DL.onEnqueue = () => setDlOpen(true);
     return () => {
       DL.onEnqueue = null;
     };
-  }, [setDlOpen]);
-  /* … and closes when a chapter opens in the reader (auto-open flow) */
-  useEffect(() => {
-    const close = () => {
-      if (window.location.hash.startsWith("#/read/")) setDlOpen(false);
-    };
-    window.addEventListener("hashchange", close);
-    return () => window.removeEventListener("hashchange", close);
   }, [setDlOpen]);
 
   return (

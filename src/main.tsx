@@ -8,12 +8,14 @@ import { registerSW } from "virtual:pwa-register";
 import { S } from "@/config";
 import { applyTheme } from "@/lib/theme";
 import { DL } from "@/dlqueue";
+import { dlDialog } from "@/components/DownloadsPopup";
 import App from "@/App";
 
 /* the download queue opens finished chapters through the reader
    (hash navigation — works from outside React) */
 DL.openChapter = (id) => {
   window.location.hash = `#/read/${id}`;
+  dlDialog.close(); // the requested flow: popup closes once the PDF loads
 };
 
 /* don't close the tab while downloads are running */
