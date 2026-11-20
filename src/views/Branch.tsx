@@ -33,12 +33,12 @@ const STREAM_ORDER: Stream[] = [
 export function Branch() {
   const { branchId = "" } = useParams();
   const id = Number.parseInt(branchId, 10);
-  const meta = catalog.snapshot.branches.find((b) => b.id === id);
+  const meta = catalog().snapshot.branches.find((b) => b.id === id);
   const label = meta?.label || "Guide";
 
   const fetchList = useCallback(async () => {
     const [books, metas] = await Promise.all([
-      catalog.getBooks(id),
+      catalog().getBooks(id),
       DB.allMeta(),
     ]);
     const saved: Record<string, number> = {};

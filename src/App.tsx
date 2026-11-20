@@ -1,6 +1,13 @@
 /* App.tsx — shell: routes, bottom navigation, error boundary */
 
-import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  lazy,
+  useEffect,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import {
   HashRouter,
   Link,
@@ -26,13 +33,30 @@ import {
 } from "@/components/DownloadsPopup";
 import { Button } from "@/components/ui/button";
 import { DL } from "@/downloads";
-import { Home } from "@/views/Home";
-import { Branch } from "@/views/Branch";
-import { Book } from "@/views/Book";
-import { Pick } from "@/views/Pick";
-import { Library as LibraryView } from "@/views/Library";
-import { Settings } from "@/views/Settings";
-import { Reader } from "@/reader/Reader";
+
+/* route-level code splitting: every view is its own chunk, fetched on first
+   navigation (and precached by the service worker once it installs) */
+const Home = lazy(() =>
+  import("./views/Home").then((m) => ({ default: m.Home })),
+);
+const Branch = lazy(() =>
+  import("./views/Branch").then((m) => ({ default: m.Branch })),
+);
+const Book = lazy(() =>
+  import("./views/Book").then((m) => ({ default: m.Book })),
+);
+const Pick = lazy(() =>
+  import("./views/Pick").then((m) => ({ default: m.Pick })),
+);
+const LibraryView = lazy(() =>
+  import("./views/Library").then((m) => ({ default: m.Library })),
+);
+const Settings = lazy(() =>
+  import("./views/Settings").then((m) => ({ default: m.Settings })),
+);
+const Reader = lazy(() =>
+  import("./reader/Reader").then((m) => ({ default: m.Reader })),
+);
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -105,6 +129,14 @@ function NotFound() {
   );
 }
 
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <p className="animate-pulse text-sm text-muted-foreground">Loading…</p>
+    </div>
+  );
+}
+
 function Shell() {
   const location = useLocation();
   const isReader = location.pathname.startsWith("/read");
@@ -123,18 +155,20 @@ function Shell() {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <main className="mx-auto w-full">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/branch/:branchId" element={<Branch />} />
-          <Route path="/book/:bookId" element={<Book />} />
-          <Route path="/book/:bookId/pick" element={<Pick />} />
-          <Route path="/book/:bookId/part/:major" element={<Book />} />
-          <Route path="/library" element={<LibraryView />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/read/:chapterId" element={<Reader />} />
-          <Route path="/read-last" element={<ReadLast />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/branch/:branchId" element={<Branch />} />
+            <Route path="/book/:bookId" element={<Book />} />
+            <Route path="/book/:bookId/pick" element={<Pick />} />
+            <Route path="/book/:bookId/part/:major" element={<Book />} />
+            <Route path="/library" element={<LibraryView />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/read/:chapterId" element={<Reader />} />
+            <Route path="/read-last" element={<ReadLast />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
 
       {!isReader ? (

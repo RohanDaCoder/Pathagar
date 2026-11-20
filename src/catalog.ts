@@ -1,12 +1,13 @@
 /* catalog.ts — branches/books/chapters: live API first, localStorage cache
    second, bundled snapshot last (offline). One service owns the catalog for
-   the whole app (SSOT); views never walk the snapshot themselves. */
+   the whole app (SSOT); views never walk the snapshot themselves. The
+   snapshot JSON rides in its own lazy chunk — main.tsx awaits initCatalog()
+   before the first render. */
 
 import { api, type ApiClient } from "./net";
 import { NAME_FIXES } from "./lib/nameFixes";
 import { compareChapters, parseTitle, withMathNames } from "./lib/titles";
 import type { Book, Chapter, ListResult, Snapshot } from "./types";
-import snapshotJson from "./catalog-snapshot.json";
 
 export interface ApiEnvelope<T> {
   data?: T[];
@@ -185,9 +186,22 @@ export class CatalogService {
   }
 }
 
-/* JSON import boundary: the file's inferred `kind: string` cannot prove the
-   ChapterKind union — the values are produced by scripts/make-snapshot.ts. */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-const SNAPSHOT = snapshotJson as Snapshot;
+let svc: CatalogService | null = null;
 
-export const catalog = new CatalogService(SNAPSHOT);
+/** Load the bundled snapshot (its own lazy chunk) and build the service. */
+export async function initCatalog(): Promise<CatalogService> {
+  if (svc) return svc;
+  const { default: snapshotJson } = await import("./catalog-snapshot.json");
+  /* JSON import boundary: the file's inferred `kind: string` cannot prove
+     the ChapterKind union — values are produced by scripts/make-snapshot.ts */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  svc = new CatalogService(snapshotJson as Snapshot);
+  return svc;
+}
+
+/** The app-wide catalog service. Valid only after initCatalog() resolved
+    (main.tsx awaits it before the first render). */
+export function catalog(): CatalogService {
+  if (!svc) throw new Error("catalog() used before initCatalog() resolved");
+  return svc;
+}

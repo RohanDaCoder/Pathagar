@@ -12,7 +12,7 @@ import { fmtMB } from "@/lib/format";
 
 export function Home() {
   const navigate = useNavigate();
-  const snap = catalog.snapshot;
+  const snap = catalog().snapshot;
   const [meta, setMeta] = useState<Awaited<
     ReturnType<typeof DB.allMeta>
   > | null>(null);

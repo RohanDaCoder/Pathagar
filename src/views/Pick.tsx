@@ -9,14 +9,14 @@ import type { Book } from "@/types";
 
 export function Pick() {
   const { bookId = "" } = useParams();
-  const ref = catalog.findBook(bookId);
+  const ref = catalog().findBook(bookId);
   const base = ref?.book ?? null;
 
   /* the sibling upload: same branch, same subject core, opposite variant */
   const sibling =
     base && ref
-      ? (catalog.snapshot.branches
-          .find((b) => b.id === ref.branchId)
+      ? (catalog()
+          .snapshot.branches.find((b) => b.id === ref.branchId)
           ?.books.find((x) => isTwin(base, x)) ?? null)
       : null;
 
@@ -64,7 +64,7 @@ export function Pick() {
             key={bk.id}
             className="flex cursor-pointer items-center gap-4 p-5 transition-colors hover:bg-muted/50"
             onClick={() => {
-              catalog.rememberBook({ ...bk, branchId: ref.branchId });
+              catalog().rememberBook({ ...bk, branchId: ref.branchId });
               window.location.hash = `#/book/${bk.id}`;
             }}
           >
@@ -79,7 +79,7 @@ export function Pick() {
                 {isMcqBook(bk.name) ? "MCQ" : "CQ"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {catalog.chapterCountOf(bk.id) || "…"} chapters
+                {catalog().chapterCountOf(bk.id) || "…"} chapters
               </p>
             </div>
             <ChevronRight
