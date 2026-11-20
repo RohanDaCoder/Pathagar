@@ -1,4 +1,4 @@
-package com.pathagar.app;
+package me.rohandacoder.pathagar;
 
 import com.getcapacitor.BridgeActivity;
 
