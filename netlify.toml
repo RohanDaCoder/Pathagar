@@ -4,6 +4,9 @@
 # or drag a local `bun run build` output here: https://app.netlify.com/drop
 
 [build]
+# self-gating: the same checks CI runs gate every Netlify build (production
+# AND deploy previews) — a red check/test can never ship a deploy
+command = "bun install --frozen-lockfile && bun check && bun test && bun run build"
 publish = "dist"
 
 # PDF reverse proxy.
