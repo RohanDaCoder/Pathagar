@@ -19,6 +19,11 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { InstallSuggestion } from "@/components/InstallSuggestion";
 import { ErrorDialog } from "@/components/ErrorDialog";
+import {
+  DownloadsDialog,
+  DownloadsFloatingButton,
+  useDownloadsOpen,
+} from "@/components/DownloadsPopup";
 import { Button } from "@/components/ui/button";
 import { Home } from "@/views/Home";
 import { Branch } from "@/views/Branch";
@@ -102,6 +107,7 @@ function Shell() {
   const location = useLocation();
   const isReader = location.pathname.startsWith("/read");
   const hasLast = Boolean(localStorage.getItem("ptg:lastRead"));
+  const [dlOpen, setDlOpen] = useDownloadsOpen();
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -117,6 +123,11 @@ function Shell() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+
+      {!isReader ? (
+        <DownloadsFloatingButton onOpen={() => setDlOpen(true)} />
+      ) : null}
+      <DownloadsDialog open={dlOpen} onOpenChange={setDlOpen} />
 
       {!isReader ? (
         <nav

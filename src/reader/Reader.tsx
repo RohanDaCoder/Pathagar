@@ -1,10 +1,23 @@
 /* reader/Reader.tsx — pdf.js viewer, renders downloaded PDFs from IndexedDB.
    pdf.js (npm pdfjs-dist@6) is dynamically imported so it lands in a lazy
-   chunk with its own worker URL. */
+   chunk with its own worker URL.
+
+   Scaling: pages fit themselves to the viewport (fit-width by default,
+   fit-page optional) and re-fit on resize/rotation. Zoom is real (pdf.js
+   re-render), driven by buttons, +/- keys, ctrl+wheel and pinch. The canvas
+   is `shrink-0 max-w-none` — a plain flex item gets visually squashed when
+   it is wider than its container, which is what made pages look distorted
+   on desktop before. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ChevronLeft, ExternalLink, Minus, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  ExternalLink,
+  Maximize2,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorDialog } from "@/components/ErrorDialog";
 import { toast } from "sonner";
@@ -30,8 +43,13 @@ async function ensurePdfJs(): Promise<PdfjsLib> {
   ]);
   lib.GlobalWorkerOptions.workerSrc = worker.default;
   pdfjs = lib;
-  return lib;
+  return pdfjs;
 }
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 5;
+const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+const PAD = 16;
 
 export function Reader() {
   const { chapterId = "" } = useParams();
@@ -41,41 +59,61 @@ export function Reader() {
   const docRef = useRef<PDFDocumentProxy | null>(null);
   const loadingRef = useRef<PDFDocumentLoadingTask | null>(null);
   const taskRef = useRef<RenderTask | null>(null);
+  const pageDimsRef = useRef<{ w: number; h: number } | null>(null);
 
   const [meta, setMeta] = useState<ChapterMeta | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [scale, setScale] = useState(0);
-  const fitRef = useRef(0);
-  const stateRef = useRef({ pageNum: 1, scale: 0 });
+  /* zoom = 0 → auto-fit; > 0 → manual absolute scale */
+  const [zoom, setZoom] = useState(0);
+  const [fitMode, setFitMode] = useState<"width" | "page">("width");
+  const [zoomPct, setZoomPct] = useState(0); // displayed % of current render
+  type FitMode = "width" | "page";
+  const stateRef = useRef<{
+    pageNum: number;
+    zoom: number;
+    fitMode: FitMode;
+  }>({ pageNum: 1, zoom: 0, fitMode: "width" });
 
   useEffect(() => {
-    stateRef.current = { pageNum, scale };
-  }, [pageNum, scale]);
+    stateRef.current = { pageNum, zoom, fitMode };
+  }, [pageNum, zoom, fitMode]);
 
-  const renderPage = useCallback(async (page: number, renderScale?: number) => {
+  const fitScale = useCallback((): number => {
+    const wrap = wrapRef.current;
+    const dims = pageDimsRef.current;
+    if (!wrap || !dims) return 1;
+    const fitW = Math.max(MIN_ZOOM, (wrap.clientWidth - PAD) / dims.w);
+    if (stateRef.current.fitMode === "page")
+      return Math.max(
+        MIN_ZOOM,
+        Math.min(fitW, (wrap.clientHeight - PAD) / dims.h),
+      );
+    return fitW;
+  }, []);
+
+  const renderPage = useCallback(async (page: number, scale: number) => {
     const doc = docRef.current;
     const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!doc || !canvas || !wrap) return;
+    if (!doc || !canvas || !scale) return;
     const pg = await doc.getPage(page);
+    pageDimsRef.current = {
+      w: pg.getViewport({ scale: 1 }).width,
+      h: pg.getViewport({ scale: 1 }).height,
+    };
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (!renderScale || !fitRef.current) {
-      // fit is computed only when the canvas is in the layout — measuring
-      // before mount returns a stale (too narrow) wrap width
-      const v1 = pg.getViewport({ scale: 1 });
-      fitRef.current = Math.max(0.2, (wrap.clientWidth - 16) / v1.width);
-    }
-    const eff = Math.min(4, Math.max(0.25, renderScale ?? fitRef.current));
+    const eff = clampZoom(scale);
     const vp = pg.getViewport({ scale: eff * dpr });
     canvas.width = Math.floor(vp.width);
     canvas.height = Math.floor(vp.height);
     canvas.style.width = `${Math.floor(vp.width / dpr)}px`;
+    canvas.style.height = `${Math.floor(vp.height / dpr)}px`;
     taskRef.current?.cancel();
     taskRef.current = pg.render({ canvas, viewport: vp });
     setNumPages(doc.numPages);
+    setZoomPct(Math.round(eff * 100));
     try {
       await taskRef.current.promise;
     } catch {
@@ -94,7 +132,7 @@ export function Reader() {
         blob = await DB.getFile(chapterId);
         if (cancelled) return;
         setLoading(true); // after the first await — no synchronous setState in the effect
-        fitRef.current = 0;
+        pageDimsRef.current = null;
       } catch {
         /* handled below */
       }
@@ -119,9 +157,13 @@ export function Reader() {
         }
         docRef.current = doc;
         setPageNum(1);
-        setScale(0);
-        stateRef.current = { pageNum: 1, scale: 0 };
-        await renderPage(1);
+        setZoom(0);
+        stateRef.current = {
+          pageNum: 1,
+          zoom: 0,
+          fitMode: stateRef.current.fitMode,
+        };
+        await renderPage(1, fitScale());
       } catch (e) {
         if (!cancelled) setOpenError(errMessage(e));
       } finally {
@@ -135,14 +177,44 @@ export function Reader() {
       loadingRef.current = null;
       docRef.current = null;
     };
-  }, [chapterId, navigate, renderPage]);
+  }, [chapterId, navigate, renderPage, fitScale]);
 
-  // re-render on page/scale change
+  // re-render on page / zoom / fit change
   useEffect(() => {
     if (!docRef.current || loading) return;
-    void renderPage(pageNum, scale || undefined); // scale 0 = fit to width
+    const eff = zoom || fitScale();
+    void renderPage(pageNum, eff);
     wrapRef.current?.scrollTo({ top: 0 });
-  }, [pageNum, scale, renderPage, loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- fitScale/renderPage are stable; refitting on identity change would loop renders
+  }, [pageNum, zoom, fitMode, loading, fitScale, renderPage]);
+
+  // re-fit when the viewport changes (resize / rotate / devtools)
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || typeof ResizeObserver === "undefined") return undefined;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (stateRef.current.zoom) return; // manual zoom stays
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        if (docRef.current && !loading)
+          void renderPage(stateRef.current.pageNum, fitScale());
+      }, 120);
+    });
+    ro.observe(wrap);
+    return () => {
+      ro.disconnect();
+      if (t) clearTimeout(t);
+    };
+  }, [loading, fitScale, renderPage]);
+
+  const zoomBy = useCallback(
+    (factor: number) => {
+      const cur = stateRef.current.zoom || fitScale();
+      setZoom(clampZoom(cur * factor));
+    },
+    [fitScale],
+  );
 
   // keyboard navigation
   useEffect(() => {
@@ -152,42 +224,89 @@ export function Reader() {
       else if (e.key === "ArrowLeft" || e.key === "PageUp")
         setPageNum((p) => Math.max(p - 1, 1));
       else if (e.key === "Escape") void navigate(-1);
-      else if (e.key === "+")
-        setScale((s) => Math.min(4, (s || fitRef.current) * 1.25));
-      else if (e.key === "-")
-        setScale((s) => Math.max(0.25, (s || fitRef.current) / 1.25));
+      else if (e.key === "+" || e.key === "=") zoomBy(1.25);
+      else if (e.key === "-") zoomBy(1 / 1.25);
+      else if (e.key === "0") {
+        setZoom(0);
+        setFitMode("width");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [numPages, navigate]);
+  }, [numPages, navigate, zoomBy]);
 
-  // swipe navigation
+  // ctrl/cmd+wheel zoom (plain wheel scrolls the page)
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return undefined;
-    let x: number | null = null;
-    let y = 0;
-    const onStart = (e: TouchEvent) => {
-      x = e.touches[0].clientX;
-      y = e.touches[0].clientY;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      zoomBy(Math.exp(-e.deltaY * 0.002));
     };
-    const onEnd = (e: TouchEvent) => {
-      if (x === null) return;
-      const dx = e.changedTouches[0].clientX - x;
-      const dy = e.changedTouches[0].clientY - y;
-      x = null;
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, [zoomBy]);
+
+  // touch: one finger swipes pages, two fingers pinch-zoom
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return undefined;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let swipeX: number | null = null;
+    let swipeStart: { x: number; y: number } | null = null;
+    let pinchDist = 0;
+    let pinchZoom = 0;
+
+    const dist = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
+    const onStart = (e: PointerEvent) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 1) {
+        swipeX = e.clientX;
+        swipeStart = { x: e.clientX, y: e.clientY };
+      } else if (pointers.size === 2) {
+        swipeX = null;
+        pinchDist = dist();
+        pinchZoom = stateRef.current.zoom || fitScale();
+        wrap.setPointerCapture(e.pointerId);
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2 && pinchDist > 0) {
+        const ratio = dist() / pinchDist;
+        setZoom(clampZoom(pinchZoom * ratio));
+      }
+    };
+    const onEnd = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinchDist = 0;
+      if (swipeX === null || swipeStart === null) return;
+      const dx = e.clientX - swipeStart.x;
+      const dy = e.clientY - swipeStart.y;
+      swipeX = null;
+      swipeStart = null;
       if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
         if (dx < 0) setPageNum((p) => Math.min(p + 1, numPages));
         else setPageNum((p) => Math.max(p - 1, 1));
       }
     };
-    wrap.addEventListener("touchstart", onStart, { passive: true });
-    wrap.addEventListener("touchend", onEnd, { passive: true });
+    wrap.addEventListener("pointerdown", onStart);
+    wrap.addEventListener("pointermove", onMove);
+    wrap.addEventListener("pointerup", onEnd);
+    wrap.addEventListener("pointercancel", onEnd);
     return () => {
-      wrap.removeEventListener("touchstart", onStart);
-      wrap.removeEventListener("touchend", onEnd);
+      wrap.removeEventListener("pointerdown", onStart);
+      wrap.removeEventListener("pointermove", onMove);
+      wrap.removeEventListener("pointerup", onEnd);
+      wrap.removeEventListener("pointercancel", onEnd);
     };
-  }, [numPages]);
+  }, [numPages, fitScale]);
 
   async function openInTab() {
     const blob = await DB.getFile(chapterId);
@@ -227,13 +346,17 @@ export function Reader() {
             {meta ? `${meta.title} · ${meta.bookName}` : "Reader"}
           </p>
         </div>
+        <span
+          className="min-w-11 text-center text-xs tabular-nums text-muted-foreground"
+          aria-label={`Zoom ${zoomPct}%`}
+        >
+          {zoomPct}%
+        </span>
         <Button
           size="icon"
           variant="ghost"
           aria-label="Zoom out"
-          onClick={() =>
-            setScale((s) => Math.max(0.25, (s || fitRef.current) / 1.25))
-          }
+          onClick={() => zoomBy(1 / 1.25)}
         >
           <Minus className="size-4" aria-hidden="true" />
         </Button>
@@ -241,11 +364,21 @@ export function Reader() {
           size="icon"
           variant="ghost"
           aria-label="Zoom in"
-          onClick={() =>
-            setScale((s) => Math.min(4, (s || fitRef.current) * 1.25))
-          }
+          onClick={() => zoomBy(1.25)}
         >
           <Plus className="size-4" aria-hidden="true" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={fitMode === "width" ? "Fit page" : "Fit width"}
+          title="Toggle fit width / fit page"
+          onClick={() => {
+            setZoom(0);
+            setFitMode((m) => (m === "width" ? "page" : "width"));
+          }}
+        >
+          <Maximize2 className="size-4" aria-hidden="true" />
         </Button>
         {!NATIVE ? (
           <Button
@@ -262,11 +395,17 @@ export function Reader() {
       <div
         ref={wrapRef}
         className="flex flex-1 justify-center overflow-auto bg-muted/30"
+        style={{ touchAction: "pan-x pan-y pinch-zoom" }}
       >
         {loading ? (
           <p className="pt-10 text-sm text-muted-foreground">Loading PDF…</p>
         ) : (
-          <canvas ref={canvasRef} className="my-2 shadow-lg" />
+          /* shrink-0: a flex item wider than its container gets visually
+             squashed (aspect broken) unless shrinking is disabled */
+          <canvas
+            ref={canvasRef}
+            className="my-2 max-w-none shrink-0 shadow-lg"
+          />
         )}
       </div>
 
