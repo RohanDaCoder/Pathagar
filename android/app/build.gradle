@@ -55,9 +55,8 @@ android {
 }
 
 repositories {
-    flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-    }
+    // flatDir dropped: this app ships no Cordova plugins, and flatDir
+    // repositories trip a Gradle warning on every build
 }
 
 dependencies {
