@@ -308,20 +308,26 @@ export function Reader() {
           two-finger gestures belong to the pinch surface hook */}
       <div
         ref={wrapRef}
-        className="flex flex-1 justify-center overflow-auto bg-muted/30"
+        className="flex flex-1 overflow-auto bg-muted/30"
         style={{ touchAction: "pan-x pan-y" }}
       >
         {loading ? (
-          <p className="pt-10 text-sm text-muted-foreground">Loading PDF…</p>
+          <p className="mx-auto pt-10 text-sm text-muted-foreground">
+            Loading PDF…
+          </p>
         ) : (
           /* shrink-0: a flex item wider than its container gets visually
-             squashed (aspect broken) unless shrinking is disabled */
+             squashed (aspect broken) unless shrinking is disabled.
+             mx-auto (NOT justify-center on the scroller): auto margins
+             center the page when it fits but collapse to 0 when it is
+             wider than the viewport — justify-center would push the left
+             half of the overflow out of reach (scrollLeft >= 0) */
           <canvas
             ref={(c) => {
               canvasRef.current = c;
               if (c) engine.attach(c);
             }}
-            className="my-2 max-w-none shrink-0 shadow-lg"
+            className="mx-auto my-2 max-w-none shrink-0 shadow-lg"
           />
         )}
       </div>
