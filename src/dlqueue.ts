@@ -109,7 +109,7 @@ export const DL: DLApi = {
       });
       await DB.putFile(id, buf, {
         id,
-        title: chapter.title || "Chapter",
+        title: chapter.display || chapter.title || "Chapter",
         bookId: String(book.id),
         bookName: book.name,
         branchId: String(book.branchId || ""),
