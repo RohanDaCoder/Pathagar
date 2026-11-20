@@ -1,0 +1,18 @@
+{
+  "name": "পাঠাগার — ক্লাস ৯-১০ গাইড",
+  "short_name": "পাঠাগার",
+  "description": "ক্লাস ৯-১০ এর গাইড বই অধ্যায়বিভাগে ডাউনলোড করে অফলাইনে পড়ুন।",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0D6E62",
+  "theme_color": "#0D6E62",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

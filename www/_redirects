@@ -1,0 +1,3 @@
+# পাঠসঙ্গী — Netlify redirects (honored on every deploy method, incl. drag & drop)
+# PDF host (pdf.tetashweb.xyz) sends no CORS headers; this proxy makes PDFs same-origin.
+/pdf/* https://pdf.tetashweb.xyz/:splat 200!

@@ -1,0 +1,399 @@
+{
+ "generated": "2026-11-20",
+ "source": "reverse-engineered from com.nahidnafiz.classninebooks v20.0 (books.tetashweb.xyz API)",
+ "branches": [
+  {
+   "id": 18203,
+   "label": "জেনারেলের গাইড (General Guide, SSC 2028)",
+   "total_chapters": 548,
+   "books": [
+    {
+     "id": 182405,
+     "name": "বাংলা ১ম পত্র গাইড (SSC 2028)",
+     "chapters": 34
+    },
+    {
+     "id": 182407,
+     "name": "বাংলা সহপাঠ (SSC 2028)",
+     "chapters": 3
+    },
+    {
+     "id": 182408,
+     "name": "ইংরেজি ১ম পত্র গাইড বই SSC 2028",
+     "chapters": 29
+    },
+    {
+     "id": 182410,
+     "name": "ইংরেজি ২য় পত্র গাইড (SSC 2028)",
+     "chapters": 38
+    },
+    {
+     "id": 182412,
+     "name": "গণিত গাইড MCQ (SSC 2028)",
+     "chapters": 43
+    },
+    {
+     "id": 182413,
+     "name": "গণিত গাইড CQ (SSC 2028)",
+     "chapters": 46
+    },
+    {
+     "id": 182414,
+     "name": "তথ্য ও যোগাযোগ প্রযুক্তি (SSC 2028)",
+     "chapters": 13
+    },
+    {
+     "id": 182415,
+     "name": "ইসলাম শিক্ষা গাইড (SSC 2028)",
+     "chapters": 7
+    },
+    {
+     "id": 182416,
+     "name": "হিন্দুধর্ম শিক্ষা গাইড (SSC 2028)",
+     "chapters": 13
+    },
+    {
+     "id": 182417,
+     "name": "বৌদ্ধধর্ম শিক্ষা গাইড (SSC 2028)",
+     "chapters": 13
+    },
+    {
+     "id": 182418,
+     "name": "পদার্থবিজ্ঞান গাইড MCQ (SSC 2028)",
+     "chapters": 16
+    },
+    {
+     "id": 182419,
+     "name": "পদার্থবিজ্ঞান গাইড CQ (SSC 2028)",
+     "chapters": 16
+    },
+    {
+     "id": 182420,
+     "name": "রসায়ন গাইড MCQ (SSC 2028)",
+     "chapters": 15
+    },
+    {
+     "id": 182421,
+     "name": "রসায়ন গাইড CQ (SSC 2028)",
+     "chapters": 14
+    },
+    {
+     "id": 182422,
+     "name": "জীববিজ্ঞান  MCQ (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182423,
+     "name": "জীববিজ্ঞান  CQ (SSC 2028)",
+     "chapters": 18
+    },
+    {
+     "id": 182424,
+     "name": "উচ্চতর গণিত গাইড CQ (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182425,
+     "name": "উচ্চতর গণিত গাইড MCQ (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182426,
+     "name": "বাংলাদেশ ও বিশ্বপরিচয় গাইড (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182427,
+     "name": "বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা গাইড (SSC 2028)",
+     "chapters": 15
+    },
+    {
+     "id": 182428,
+     "name": "ভূগোল ও পরিবেশ গাইড (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182429,
+     "name": "অর্থনীতি গাইড বই (SSC 2028)",
+     "chapters": 12
+    },
+    {
+     "id": 182430,
+     "name": "পৌরনীতি ও নাগরিকতা গাইড (SSC 2028)",
+     "chapters": 12
+    },
+    {
+     "id": 182431,
+     "name": "বিজ্ঞান গাইড বই (SSC 2028)",
+     "chapters": 15
+    },
+    {
+     "id": 182432,
+     "name": "কৃষিশিক্ষা গাইড (SSC 2028)",
+     "chapters": 10
+    },
+    {
+     "id": 182433,
+     "name": "গার্হস্থ্যবিজ্ঞান গাইড (SSC 2028)",
+     "chapters": 21
+    },
+    {
+     "id": 182435,
+     "name": "ব্যবসায় উদ্যোগ গাইড (SSC 2028)",
+     "chapters": 14
+    },
+    {
+     "id": 182436,
+     "name": "ফিন্যান্স ও ব্যাংকিং গাইড (SSC 2028)",
+     "chapters": 17
+    },
+    {
+     "id": 182437,
+     "name": "হিসাববিজ্ঞান গাইড MCQ (SSC 2028)",
+     "chapters": 14
+    },
+    {
+     "id": 182438,
+     "name": "হিসাববিজ্ঞান গাইড CQ (SSC 2028)",
+     "chapters": 14
+    },
+    {
+     "id": 182442,
+     "name": "বাংলা 2nd পত্র গাইড (SSC 2028)",
+     "chapters": 1
+    }
+   ]
+  },
+  {
+   "id": 17786,
+   "label": "মাদ্রাসার গাইড (Madrasah Guide)",
+   "total_chapters": 226,
+   "books": [
+    {
+     "id": 17798,
+     "name": "আকাইদ ও ফিকহ গাইড",
+     "chapters": 25
+    },
+    {
+     "id": 17799,
+     "name": "আললুগাতুল আরবিয়্যাতুল ইত্তিসালিয়্যা",
+     "chapters": 25
+    },
+    {
+     "id": 17800,
+     "name": "আরবি ১ম পত্র গাইডবই",
+     "chapters": 11
+    },
+    {
+     "id": 17801,
+     "name": "আরবি ২য় পত্র (কাওয়াইদ ও অনুবাদ রচনা অংশ)",
+     "chapters": 15
+    },
+    {
+     "id": 17802,
+     "name": "হাদিস শরিফ",
+     "chapters": 43
+    },
+    {
+     "id": 17803,
+     "name": "ফিকহ ও উসূলুল ফিকহ",
+     "chapters": 24
+    },
+    {
+     "id": 17804,
+     "name": "মানতিক গাইড বই",
+     "chapters": 10
+    },
+    {
+     "id": 17805,
+     "name": "কুরআন মাজিদ ও তাজভিদ",
+     "chapters": 27
+    },
+    {
+     "id": 17830,
+     "name": "ইসলামের ইতিহাস",
+     "chapters": 29
+    },
+    {
+     "id": 18179,
+     "name": "আরবি ১ম পত্র গাইডবই (SSC 2026)",
+     "chapters": 9
+    },
+    {
+     "id": 18180,
+     "name": "হাদিস শরিফ (SSC 2026)",
+     "chapters": 8
+    }
+   ]
+  },
+  {
+   "id": 17794,
+   "label": "English Version Guide (Nine)",
+   "total_chapters": 60,
+   "books": [
+    {
+     "id": 18115,
+     "name": "ICT Guide",
+     "chapters": 6
+    },
+    {
+     "id": 18116,
+     "name": "Higher Math Solutions",
+     "chapters": 14
+    },
+    {
+     "id": 18117,
+     "name": "Biology Guide",
+     "chapters": 14
+    },
+    {
+     "id": 18118,
+     "name": "Chemistry Guide",
+     "chapters": 12
+    },
+    {
+     "id": 18119,
+     "name": "Physics Guide",
+     "chapters": 14
+    }
+   ]
+  },
+  {
+   "id": 101,
+   "label": "নবম শ্রেণীর গাইড, পুরাতন (Older guide set)",
+   "total_chapters": 413,
+   "books": [
+    {
+     "id": 102,
+     "name": "Class 9-10 Bangla First Paper",
+     "chapters": 4
+    },
+    {
+     "id": 173,
+     "name": "Bangla 1st paper class 9 and 10",
+     "chapters": 4
+    },
+    {
+     "id": 174,
+     "name": "Bangla 2nd paper 9&10",
+     "chapters": 25
+    },
+    {
+     "id": 175,
+     "name": "Math class 9&10",
+     "chapters": 36
+    },
+    {
+     "id": 176,
+     "name": "Math (Clear Page)",
+     "chapters": 17
+    },
+    {
+     "id": 177,
+     "name": "English For Today",
+     "chapters": 35
+    },
+    {
+     "id": 178,
+     "name": "English 2nd paper",
+     "chapters": 52
+    },
+    {
+     "id": 179,
+     "name": "English Written Or Part B Section",
+     "chapters": 2
+    },
+    {
+     "id": 196,
+     "name": "Agricalture (class 9&10)",
+     "chapters": 8
+    },
+    {
+     "id": 197,
+     "name": "Hindu Dormo (class 9&10)",
+     "chapters": 10
+    },
+    {
+     "id": 198,
+     "name": "Islam Shikkha (class 9&10)",
+     "chapters": 5
+    },
+    {
+     "id": 199,
+     "name": "গার্হস্থ বিজ্ঞান (নবম দশম শ্রেণি)",
+     "chapters": 19
+    },
+    {
+     "id": 200,
+     "name": "ICT(class 9&10)",
+     "chapters": 9
+    },
+    {
+     "id": 201,
+     "name": "Science Subject(class 9&10)",
+     "chapters": 12
+    },
+    {
+     "id": 202,
+     "name": "বাংলাদেশ ও বিশ্বপরিচয় (নবম দশম শ্রেণী)",
+     "chapters": 16
+    },
+    {
+     "id": 203,
+     "name": "জীববিজ্ঞান ( বিজ্ঞান বিভাগ)( নবম দশম শ্রেণি)",
+     "chapters": 14
+    },
+    {
+     "id": 204,
+     "name": "রসায়ন  (বিজ্ঞান বিভাগ )(নবম দশম শ্রেণীর)",
+     "chapters": 13
+    },
+    {
+     "id": 205,
+     "name": "উচ্চতার গণিত (বিজ্ঞান বিভাগ )(নবম দশম শ্রেণি)",
+     "chapters": 15
+    },
+    {
+     "id": 206,
+     "name": "পদার্থবিজ্ঞান (বিজ্ঞান বিভাগ )(নবম দশম শ্রেণি)",
+     "chapters": 15
+    },
+    {
+     "id": 207,
+     "name": "Accounting (class9&10)",
+     "chapters": 13
+    },
+    {
+     "id": 208,
+     "name": "Finance & Banking (class 9&10)",
+     "chapters": 13
+    },
+    {
+     "id": 209,
+     "name": "Entrepreneurship (class 9&10)",
+     "chapters": 12
+    },
+    {
+     "id": 210,
+     "name": "পৌরনীতি ও নাগরিকতা (মানবিক বিভাগ) (নবম দশম শ্রেণী)",
+     "chapters": 11
+    },
+    {
+     "id": 211,
+     "name": "ভূগোল ( মানবিক বিভাগ) (নবম দশম শ্রেণী)",
+     "chapters": 15
+    },
+    {
+     "id": 212,
+     "name": "ইতিহাস (মানবিক বিভাগ) (নবম দশম শ্রেণি)",
+     "chapters": 28
+    },
+    {
+     "id": 213,
+     "name": "অর্থনীতি (মানবিক বিভাগ) (নবম দশম শ্রেণি)",
+     "chapters": 10
+    }
+   ]
+  }
+ ]
+}
