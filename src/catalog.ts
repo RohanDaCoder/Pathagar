@@ -92,17 +92,13 @@ export async function getBooks(
 /* Enrich raw API chapters with the parsed contract and order them for
    display (front matter, numbered chapters ascending, extras last). */
 function normalizeChapters(items: Chapter[]): Chapter[] {
-  const enriched = items.map((ch) => {
+  const enriched: Chapter[] = items.map((ch) => {
     if (ch.display) return ch; // already parsed (cache from a newer build)
     const p = parseTitle(ch.title);
-    return {
-      ...ch,
-      num: p.number,
-      label: p.label,
-      display: p.display,
-      pages: p.pageStart ? ([p.pageStart, p.pageEnd] as const) : null,
-      kind: p.kind,
-    };
+    const pages: [number, number] | null = p.pageStart
+      ? [p.pageStart, p.pageEnd ?? p.pageStart]
+      : null;
+    return { ...ch, num: p.number, label: p.label, display: p.display, pages, kind: p.kind };
   });
   return enriched
     .map((ch, i) => ({ ch, i, p: parseTitle(ch.title) }))
