@@ -3,7 +3,7 @@
      DL.onRowUpdate  = fn(chapterId)   — set by the book view, re-paints a row
      DL.openChapter  = fn(chapterId)   — set by main.ts, opens the reader */
 import { S } from "./config";
-import { errMessage, errStatus } from "./utils";
+import { errMessage, errStatus } from "@/lib/errors";
 import { downloadPdf, pdfFetchUrl } from "./net";
 import { DB } from "./db";
 import type { Book, Chapter, DlState } from "./types";

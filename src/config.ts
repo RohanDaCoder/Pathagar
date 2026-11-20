@@ -11,7 +11,7 @@ export interface Settings {
   apiUrl: string;
   apiKey: string;
   proxyPrefix: string; // web: same-origin Netlify proxy path
-  useProxyOnWeb: boolean; // native downloads directly (no CORS in native http)
+  proxyEnabled: boolean; // native downloads directly (no CORS in native http)
   theme: string;
   concurrency: number;
 }
@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiUrl: "https://books.tetashweb.xyz/api/v1/app/",
   apiKey: "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3",
   proxyPrefix: "/pdf/",
-  useProxyOnWeb: !NATIVE,
+  proxyEnabled: !NATIVE,
   theme: "auto",
   concurrency: 2,
 };
@@ -68,7 +68,4 @@ export const S = {
 export function saveSettings() {
   if (typeof localStorage !== "undefined")
     localStorage.setItem("ptg:settings", JSON.stringify(S.settings));
-}
-export function applyTheme() {
-  document.documentElement.dataset.theme = S.settings.theme;
 }

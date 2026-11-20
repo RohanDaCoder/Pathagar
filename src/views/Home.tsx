@@ -1,0 +1,169 @@
+/* views/Home.tsx — branch cards, library shortcut, update banner */
+
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
+import {
+  BookOpen,
+  ChevronRight,
+  Library,
+  RefreshCw,
+  WifiOff,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { APP_NAME, APP_VERSION } from "@/config";
+import { loadSnapshot } from "@/catalog";
+import { DB } from "@/db";
+import { checkForUpdate, skipVersion, type UpdateInfo } from "@/updater";
+import { fmtMB } from "@/lib/format";
+
+export function Home() {
+  const navigate = useNavigate();
+  const snap = loadSnapshot();
+  const [meta, setMeta] = useState<Awaited<
+    ReturnType<typeof DB.allMeta>
+  > | null>(null);
+  const [upd, setUpd] = useState<UpdateInfo | null>(null);
+
+  useEffect(() => {
+    void DB.allMeta().then(setMeta);
+    void checkForUpdate().then(setUpd);
+  }, []);
+
+  const totalMB = (meta ?? []).reduce((a, m) => a + (m.size || 0), 0);
+  const savedByBranch = new Map<string, number>();
+  for (const m of meta ?? []) {
+    if (m.branchId)
+      savedByBranch.set(m.branchId, (savedByBranch.get(m.branchId) || 0) + 1);
+  }
+  const onPagesMirror =
+    typeof location !== "undefined" &&
+    (location.hostname.endsWith(".github.io") ||
+      location.hostname.endsWith(".is-a.dev"));
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 pb-24 pt-6">
+      <header className="flex items-center gap-3">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
+          P
+        </div>
+        <div>
+          <h1 className="text-xl font-bold">{APP_NAME}</h1>
+          <p className="text-sm text-muted-foreground">
+            Class 9-10 guide books · offline library
+          </p>
+        </div>
+      </header>
+
+      {upd && !upd.skipped ? (
+        <Card className="flex items-center gap-3 p-3">
+          <RefreshCw
+            className="size-5 shrink-0 text-primary"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              New version v{upd.latest} is available
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Current: v{upd.current} — download and install the update.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => window.open(upd.apkUrl, "_blank", "noopener")}
+          >
+            Download
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              skipVersion(upd.latest);
+              setUpd(null);
+            }}
+          >
+            Later
+          </Button>
+        </Card>
+      ) : null}
+
+      {onPagesMirror ? (
+        <Card className="flex items-start gap-3 border-destructive/40 bg-destructive/5 p-3">
+          <WifiOff
+            className="mt-0.5 size-5 shrink-0 text-destructive"
+            aria-hidden="true"
+          />
+          <p className="text-sm">
+            Demo build — PDF downloads need the Netlify deployment or the
+            Android app (this mirror has no PDF proxy). Browsing and offline
+            reading work.
+          </p>
+        </Card>
+      ) : null}
+
+      {meta && meta.length > 0 ? (
+        <Link to="/library" className="block">
+          <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-muted/50">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Library className="size-5" aria-hidden="true" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold">My Library</p>
+              <p className="text-sm text-muted-foreground">
+                {meta.length} chapters · {fmtMB(totalMB)}
+              </p>
+            </div>
+            <ChevronRight
+              className="size-5 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </Card>
+        </Link>
+      ) : null}
+
+      <div className="grid gap-3">
+        {snap.branches.map((b) => (
+          <Card
+            key={b.id}
+            className="flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-muted/50"
+            onClick={() => void navigate(`/branch/${b.id}`)}
+          >
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <BookOpen className="size-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-semibold">
+                {b.label.replace(/\s*\(.*?\)\s*$/, "")}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {b.books.length} books · {b.total_chapters} chapters
+              </p>
+              {savedByBranch.get(String(b.id)) ? (
+                <Badge variant="secondary" className="mt-1">
+                  ✓ {savedByBranch.get(String(b.id))} saved
+                </Badge>
+              ) : null}
+            </div>
+            <ChevronRight
+              className="size-5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </Card>
+        ))}
+      </div>
+
+      <footer className="mt-4 space-y-1 text-center text-xs text-muted-foreground">
+        <p>
+          {APP_NAME} v{APP_VERSION} — download chapters and read them without
+          internet.
+        </p>
+        <p>
+          Source: open catalog of the “Class 9 All Subject Books” app (for
+          students’ personal use).
+        </p>
+      </footer>
+    </div>
+  );
+}

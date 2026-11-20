@@ -27,7 +27,7 @@ content, and the project is for students' personal study.
 | Dev server                | vite 8 (proxies `/pdf/*` to the PDF host) | `bun run dev` → http://127.0.0.1:5173   |
 | Build                     | vite 8 → `dist/`                          | `bun run build`                         |
 | Serve the build           | Bun static server + PDF proxy             | `bun run serve` → http://127.0.0.1:4173 |
-| Android sync/build        | Capacitor 6                               | `bun run cap:sync`, `bun run build:apk` |
+| Android sync/build        | Capacitor 8                               | `bun run cap:sync`, `bun run build:apk` |
 
 `typescript@7` is a devDependency for editor tooling (tsserver) and a
 cross-check (`bunx tsc --noEmit`); CI uses `bun check` because it is faster.
@@ -46,33 +46,47 @@ bun check && bun fmt --check && bun lint && bun test && bun run build
 ```
 ├── skills/               vendored agent skills (github-actions-*, shadcn-ui,
 │                         react-best-practices, web-design-guidelines, find-skills)
-├── index.html            vite entry (app shell, CSP, bottom nav)
-├── src/                  TypeScript sources (no framework, hash-routed)
-│   ├── main.ts           composition root: router + view dispatch + SW registration
+├── index.html            vite entry (#root mount, CSP, color-scheme)
+├── src/                  React 19 + TypeScript (HashRouter, shadcn/ui, Tailwind 4)
+│   ├── main.tsx          React mount, theme, SW registration, DL→reader bridge
+│   ├── App.tsx           routes, bottom nav, error boundary, Toaster (sonner)
 │   ├── config.ts         platform detection, settings, global state (S)
 │   ├── types.ts          shared domain types (Branch, Book, Chapter, DlState…)
 │   ├── catalog.ts        API + localStorage cache + bundled snapshot (static JSON import)
 │   ├── net.ts            network adapter: fetch (web) / CapacitorHttp (native, ranged)
 │   ├── db.ts             IndexedDB (files + meta stores)
 │   ├── dlqueue.ts        download manager (queue, concurrency, progress, cancel)
-│   ├── reader.ts         pdf.js viewer (npm pdfjs-dist@3.11, lazy chunk + worker URL)
 │   ├── updater.ts        GitHub Releases check + semver compare
-│   ├── app.css           full stylesheet (fonts in src/assets/fonts)
-│   ├── *.test.ts         bun tests (pure logic only)
-│   └── views/            home · branch · book · library · settings
+│   ├── reader/Reader.tsx pdf.js viewer (npm pdfjs-dist@6, lazy chunk + worker URL)
+│   ├── views/            Home · Branch · Book · Library · Settings (React)
+│   ├── components/ui/    shadcn/ui components (owned code, not node_modules)
+│   ├── components/       app components (ErrorState…)
+│   ├── hooks/            useDlVersion (queue → useSyncExternalStore)
+│   ├── lib/              errors, format, theme, storage (framework-agnostic)
+│   ├── styles.css        Tailwind 4 entry + theme vars + Bengali fonts
+│   └── *.test.ts         bun tests (pure logic only)
 ├── public/               copied verbatim to dist/ (icons, _redirects)
 ├── scripts/serve.ts      Bun.serve: dist + /pdf proxy (local prod preview)
-├── android/              Capacitor 6 project (webDir = dist)
-├── vite.config.ts        dev proxy, PWA (vite-plugin-pwa), VITE_BASE for Pages
-├── bunfig.toml           lint configuration (strict categories)
-└── .github/workflows/    ci · release · netlify · pages
+├── android/              Capacitor 8 project (webDir = dist, Java 21)
+├── vite.config.ts        react + tailwind plugins, dev proxy, PWA, VITE_BASE
+├── bunfig.toml           lint configuration (strict categories + exceptions)
+└── .github/workflows/    ci · release · netlify · pages (+ dependabot.yml)
 ```
 
 ## Architecture rules
 
-- **Dependency direction:** `main.ts → views → {catalog, dlqueue, reader, utils}
-→ {net, db} → config`. No cycles. The download queue never imports the UI;
-  views inject behavior via `DL.onRowUpdate` / `DL.openChapter`.
+- **Dependency direction:** React layer (`main.tsx → App → views/reader →
+{catalog, dlqueue, hooks, components}`) → framework-agnostic core
+  (`{net, db, updater, lib} → config`). No cycles. The download queue lives
+  outside React (downloads continue while navigating); views subscribe through
+  `hooks/useDlVersion` (useSyncExternalStore) and the queue calls back via
+  `DL.onRowUpdate` / `DL.openChapter`.
+- **Framework choice:** React 19 + react-router (HashRouter — works on static
+  hosts and Capacitor without server rewrites) + Tailwind 4 + shadcn/ui
+  (Radix primitives, copied into `src/components/ui/` — they are owned code;
+  edit them freely). The vercel-react-best-practices skill in `skills/`
+  documents the performance patterns (no waterfalls, direct imports over
+  barrels, `void` on fire-and-forget promises).
 - **The service worker is generated** by vite-plugin-pwa (workbox) at build
   time — do not hand-maintain a precache list; there is no coverage check in
   CI anymore. Runtime caching for the guide API (network-first) is configured
@@ -123,10 +137,12 @@ bun check && bun fmt --check && bun lint && bun test && bun run build
   (`apkscope decompile <apk> com.nahidnafiz.classninebooks.BuildConfig`) and
   update `DEFAULT_SETTINGS` in `src/config.ts`; users can also paste a new key
   in Settings at runtime.
-- **pdfjs-dist is pinned to 3.11.174 exactly** — 4.x/6.x changed the worker and
-  API surface. Upgrade deliberately, not via `bun update`.
-- **Capacitor stays on 6.x** — the `android/` project was generated for it.
-  A major upgrade needs `cap migrate` and a full device test.
+- **pdfjs-dist is pinned to 6.5.438 exactly** — major versions change the worker
+  and API surface (`canvas` render param, loading-task `destroy()`). Upgrade
+  deliberately, not via `bun update`.
+- **Capacitor is on 8.x** (Java 21 bytecode, SDK 36) — the `android/` project
+  matches the 8.6.2 template. A major upgrade needs the template diff + a full
+  device test.
 - **`bun fmt` formats YAML/JSON/Markdown too** (including workflows, this
   file and the vendored `skills/`). Run it before pushing; CI checks it.
 - **`bun lint` is strict** (correctness + suspicious + perf as errors — see

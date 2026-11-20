@@ -16,6 +16,11 @@ ignorePatterns = ["skills/"] # vendored agent-skills reference material
 [lint.rules]
 "unicorn/prefer-add-event-listener" = "off" # IDBTransaction/IDBRequest only expose on* properties
 "@typescript-eslint/no-unnecessary-type-parameters" = "off" # single-use generics are the API of $<T>() / cache.get<T>()
+"react/react-in-jsx-scope" = "off" # jsx: react-jsx transform (tsconfig) — importing React is obsolete
+"jsx-a11y/no-autofocus" = "off" # dialogs autofocus the SAFE action on purpose (modern-web-guidance dialog guide)
+"react-perf/jsx-no-new-function-as-prop" = "off" # hot-path micro-opt; this app has no hot trees — inline handlers are clearer
+"react-perf/jsx-no-new-object-as-prop" = "off" # same
+"react-perf/jsx-no-jsx-as-prop" = "off" # same
 
 [lint.categories]
 correctness = "error" # real bugs (bun default)

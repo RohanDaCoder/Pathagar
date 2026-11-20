@@ -42,7 +42,7 @@ const catCache = {
   },
 };
 
-interface ApiEnvelope<T> {
+export interface ApiEnvelope<T> {
   data?: T[];
   pagination?: { total_page?: string | number };
 }

@@ -9,7 +9,7 @@ describe("pdfFetchUrl", () => {
   beforeEach(() => {
     S.settings = {
       ...DEFAULT_SETTINGS,
-      useProxyOnWeb: true,
+      proxyEnabled: true,
       proxyPrefix: "/pdf/",
     };
   });
@@ -25,7 +25,7 @@ describe("pdfFetchUrl", () => {
   });
 
   test("keeps the direct URL when the proxy is disabled", () => {
-    S.settings.useProxyOnWeb = false;
+    S.settings.proxyEnabled = false;
     expect(pdfFetchUrl(PDF)).toBe(PDF);
   });
 

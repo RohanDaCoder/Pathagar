@@ -35,6 +35,7 @@ interface GhRelease {
 }
 
 /* returns UpdateInfo | null (null = up to date, skipped, offline or API error) */
+export type { UpdateInfo };
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (!navigator.onLine) return null;
   try {
