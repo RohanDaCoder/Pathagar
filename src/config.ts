@@ -1,4 +1,10 @@
-/* config.ts — platform detection, settings, shared app state */
+/* config.ts — platform detection, the porting config, settings, shared state.
+
+   ── PORTING CONFIG ──────────────────────────────────────────────────────────
+   The three values below are the ONLY things to change when re-pointing the
+   app at a different backend or host. They used to live in the Settings UI;
+   they are code constants now (non-technical users can no longer break the
+   app, and the values travel with the repo when we port it). */
 import { Capacitor } from "@capacitor/core";
 import type { BookCtx, DlState, Snapshot } from "./types";
 
@@ -7,24 +13,28 @@ export const APP_NAME = "Pathagar";
 export const APP_VERSION = "1.2.0";
 export const REPO = "RohanDaCoder/Pathagar"; // releases feed the in-app updater
 
+/** The original app's Laravel backend (Stage-1 report). */
+export const API_URL = "https://books.tetashweb.xyz/api/v1/app/";
+/** Hardcoded app key the original APK ships with (403 without it). */
+export const API_KEY =
+  "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3";
+/**
+ * Web PDF reverse proxy path. The PDF host sends no CORS headers, so the
+ * browser fetches PDFs same-origin through a proxy that forwards to
+ * pdf.tetashweb.xyz (netlify.toml / public/_redirects). The native app talks
+ * to the PDF host directly (no CORS in native HTTP), so this is web-only.
+ */
+export const PDF_PROXY_PREFIX = "/pdf/";
+/** Chapters downloaded at the same time. */
+export const DL_CONCURRENCY = 2;
+
+/* ── user settings (appearance only) ─────────────────────────────────────── */
 export interface Settings {
-  apiUrl: string;
-  apiKey: string;
-  proxyPrefix: string; // web: same-origin Netlify proxy path
-  proxyEnabled: boolean; // native downloads directly (no CORS in native http)
   theme: string;
-  concurrency: number;
-  expertMode: boolean; // shows technical settings (API, proxy, concurrency)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  apiUrl: "https://books.tetashweb.xyz/api/v1/app/",
-  apiKey: "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3",
-  proxyPrefix: "/pdf/",
-  proxyEnabled: !NATIVE,
   theme: "auto",
-  concurrency: 2,
-  expertMode: false,
 };
 
 /* localStorage is absent under `bun test` and can throw in private mode */
@@ -42,15 +52,11 @@ function loadSettings(): Settings {
   if (!raw) return s;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed === "object" && parsed !== null) {
-      for (const [k, v] of Object.entries(
-        parsed as Record<string, unknown>, // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- narrowing `object` for entry iteration
-      )) {
-        if (k in s && typeof v === typeof (s as Record<string, unknown>)[k]) {
-          (s as Record<string, unknown>)[k] = v;
-        }
-      }
-    }
+    const theme =
+      typeof parsed === "object" && parsed !== null
+        ? Reflect.get(parsed, "theme")
+        : null;
+    if (typeof theme === "string") s.theme = theme;
   } catch {
     /* corrupted settings — fall back to defaults */
   }

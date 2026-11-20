@@ -1,8 +1,8 @@
-/* updater.ts — in-app update check against GitHub Releases (tag-based)
-   Android: banner links the signed APK asset (browser download → install).
-   Web (PWA): the service worker already hot-updates the shell; the banner
-   simply points at the release page. */
-import { APP_VERSION, REPO } from "./config";
+/* updater.ts — in-app update check against GitHub Releases (tag-based).
+   Android only: the banner links the signed APK asset. On the web the
+   service worker hot-updates the shell on the next visit — there is nothing
+   to check, so checkForUpdate() returns null immediately. */
+import { APP_VERSION, NATIVE, REPO } from "./config";
 import type { UpdateInfo } from "./types";
 
 const RELEASES_API = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -37,6 +37,7 @@ interface GhRelease {
 /* returns UpdateInfo | null (null = up to date, skipped, offline or API error) */
 export type { UpdateInfo };
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
+  if (!NATIVE) return null; // web auto-updates — no update UI there
   if (!navigator.onLine) return null;
   try {
     const r = await fetch(RELEASES_API, {
