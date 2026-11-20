@@ -2,7 +2,7 @@
    (destructive actions get an explicit confirmation with focus on the safe
    action) */
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import { ChevronLeft, FileText, Play, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import { storageEstimate } from "@/lib/storage";
 import { DB } from "@/db";
 import { fmtMB } from "@/lib/format";
@@ -25,27 +26,18 @@ import { parseBookName, stripLeadNum } from "@/lib/titles";
 import type { ChapterMeta } from "@/types";
 
 export function Library() {
-  const [metas, setMetas] = useState<ChapterMeta[] | null>(null);
-  const [est, setEst] =
-    useState<Awaited<ReturnType<typeof storageEstimate>>>(null);
+  const fetchLibrary = useCallback(async () => {
+    const [m, e] = await Promise.all([DB.allMeta(), storageEstimate()]);
+    return {
+      metas: m.toSorted((a, b) => (b.addedAt || 0) - (a.addedAt || 0)),
+      est: e,
+    };
+  }, []);
+  const { data, reload } = useAsyncData(fetchLibrary);
+  const metas = data?.metas ?? null;
+  const est = data?.est ?? null;
   const [confirmDelete, setConfirmDelete] = useState<ChapterMeta | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-
-  const [reload, setReload] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const [m, e] = await Promise.all([DB.allMeta(), storageEstimate()]);
-      if (cancelled) return;
-      setMetas(m.toSorted((a, b) => (b.addedAt || 0) - (a.addedAt || 0)));
-      setEst(e);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-effect-dependencies -- reload is an intentional refetch trigger
-  }, [reload]);
 
   const groups = new Map<string, ChapterMeta[]>();
   for (const m of metas ?? []) {
@@ -190,8 +182,7 @@ export function Library() {
               onClick={() => {
                 const m = confirmDelete;
                 setConfirmDelete(null);
-                if (m)
-                  void DB.delFile(m.id).then(() => setReload((n) => n + 1));
+                if (m) void DB.delFile(m.id).then(reload);
               }}
             >
               Delete
@@ -215,7 +206,7 @@ export function Library() {
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => {
                 setConfirmClear(false);
-                void DB.clearAll().then(() => setReload((n) => n + 1));
+                void DB.clearAll().then(reload);
               }}
             >
               Delete all

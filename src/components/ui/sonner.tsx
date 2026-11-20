@@ -1,4 +1,4 @@
-import { S } from "@/config";
+import { settings } from "@/config";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -11,7 +11,7 @@ import {
 const Toaster = ({ ...props }: ToasterProps) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- theme union mapping at the library boundary
   const toasterTheme = (
-    S.settings.theme === "auto" ? "system" : S.settings.theme
+    settings.theme === "auto" ? "system" : settings.theme
   ) as ToasterProps["theme"];
 
   return (

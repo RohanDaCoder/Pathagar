@@ -4,34 +4,28 @@ Guidance for AI coding agents (and humans) working in this repository.
 
 ## What this is
 
-Pathagar is a lightweight client for reading Class 9-10 (SSC) guide books —
-one TypeScript codebase that ships as an installable PWA. The catalog and PDFs come from the
-original "Class 9 All Subject Books" app's server (reverse-engineered);
-this repo contains code and config only — never PDFs or other copyrighted
-content, and the project is for students' personal study.
+Pathagar — a lightweight, installable **PWA** (pure web; the native/Capacitor
+shell and APK pipeline were removed in v1.4) for reading Class 9-10 (SSC) guide
+books. The catalog and PDFs come from the original "Class 9 All Subject Books"
+app's server (reverse-engineered). This repo contains code and config only —
+never PDFs or other copyrighted content; the project is for students' personal
+study.
 
 - App ID: `me.rohandacoder.pathagar` · Repository: `RohanDaCoder/Pathagar`
-- npm package name: `me.rohandacoder.pathagar`
-- The in-app updater reads `releases/latest` from this repo and links the APK.
+- Production: https://pathagarz.netlify.app (auto-deploys from `main`)
 
 ## Toolchain (bun-first)
 
-| Concern                   | Tool                                      | Command                                 |
-| ------------------------- | ----------------------------------------- | --------------------------------------- |
-| Package manager / runtime | bun 1.4.5 (pinned in CI)                  | `bun install`, `bunx …`                 |
-| Type check                | bun's native checker (same errors as tsc) | `bun check`                             |
-| Format                    | bun's built-in formatter (Prettier-like)  | `bun fmt` / `bun fmt --check`           |
-| Lint                      | bun built-in linter (strict, bunfig.toml) | `bun lint` / `bun lint --fix`           |
-| Unit tests                | bun test                                  | `bun test`                              |
-| Dev server                | vite 8 (proxies `/pdf/*` to the PDF host) | `bun run dev` → http://127.0.0.1:5173   |
-| Build                     | vite 8 → `dist/`                          | `bun run build`                         |
-| Serve the build           | Bun static server + PDF proxy             | `bun run serve` → http://127.0.0.1:4173 |
-
-`typescript@7` is a devDependency for editor tooling (tsserver) and a
-cross-check (`bunx tsc --noEmit`); CI uses `bun check` because it is faster.
-The `bun` version is pinned in CI to the **1.4.6 line (canary)** — that is the
-release that ships the built-in linter; move the pin to `1.4.6` stable once it
-lands on npm.
+| Concern                   | Tool                                                                                                                                           | Command                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Package manager / runtime | bun (pinned in CI to the 1.4.6 canary line — it ships the built-in linter; locally `bun upgrade --canary` if `check`/`fmt`/`lint` are missing) | `bun install`                           |
+| Type check                | bun's native checker (same errors as tsc)                                                                                                      | `bun check`                             |
+| Format                    | bun's built-in formatter                                                                                                                       | `bun fmt` / `bun fmt --check`           |
+| Lint                      | bun built-in linter (strict, bunfig.toml)                                                                                                      | `bun lint` / `bun lint --fix`           |
+| Unit tests                | bun test                                                                                                                                       | `bun test`                              |
+| Dev server                | vite 8 (proxies `/pdf/*` to the PDF host)                                                                                                      | `bun run dev` → http://127.0.0.1:5173   |
+| Build                     | vite 8 → `dist/`                                                                                                                               | `bun run build`                         |
+| Serve the build           | Bun static server + PDF proxy                                                                                                                  | `bun run serve` → http://127.0.0.1:4173 |
 
 Run the full local gate before pushing — this is exactly what CI runs:
 
@@ -39,116 +33,118 @@ Run the full local gate before pushing — this is exactly what CI runs:
 bun check && bun fmt --check && bun lint && bun test && bun run build
 ```
 
+`bun fmt` also formats YAML/JSON/Markdown (workflows, this file, the catalog
+snapshot) and must run before every commit — CI has an `fmt --check` gate.
+
 ## Project layout
 
 ```
-├── skills/               vendored agent skills (github-actions-*, shadcn-ui,
-│                         react-best-practices, web-design-guidelines, find-skills)
-├── index.html            vite entry (#root mount, CSP, color-scheme)
-├── src/                  React 19 + TypeScript (HashRouter, shadcn/ui, Tailwind 4)
-│   ├── main.tsx          React mount, theme, SW registration, DL→reader bridge
-│   ├── App.tsx           routes, bottom nav, error boundary, Toaster (sonner)
-│   ├── config.ts         platform detection, settings, global state (S)
-│   ├── types.ts          shared domain types (Branch, Book, Chapter, DlState…)
-│   ├── catalog.ts        API + localStorage cache + bundled snapshot (static JSON import)
-│   ├── net.ts            network adapter: fetch (web) / CapacitorHttp (native, ranged)
-│   ├── db.ts             IndexedDB (files + meta stores)
-│   ├── dlqueue.ts        download manager (queue, concurrency, progress, cancel)
-│   ├── updater.ts        GitHub Releases check + semver compare
-│   ├── reader/Reader.tsx pdf.js viewer (npm pdfjs-dist@6, lazy chunk + worker URL)
-│   ├── views/            Home · Branch · Book · Library · Settings (React)
-│   ├── components/ui/    shadcn/ui components (owned code, not node_modules)
-│   ├── components/       app components (ErrorState…)
-│   ├── hooks/            useDlVersion (queue → useSyncExternalStore)
-│   ├── lib/              errors, format, theme, storage (framework-agnostic)
-│   ├── styles.css        Tailwind 4 entry + theme vars + Bengali fonts
-│   └── *.test.ts         bun tests (pure logic only)
-├── public/               copied verbatim to dist/ (icons, _redirects)
-├── scripts/serve.ts      Bun.serve: dist + /pdf proxy (local prod preview)
-├── android/              Capacitor 8 project (webDir = dist, Java 21)
-├── vite.config.ts        react + tailwind plugins, dev proxy, PWA, VITE_BASE
-├── bunfig.toml           lint configuration (strict categories + exceptions)
-└── .github/workflows/    ci · release · netlify · pages (+ dependabot.yml)
+├── index.html              vite entry (#root mount, CSP, no page zoom)
+├── src/
+│   ├── main.tsx            composition root: mount, theme, SW, DL→reader bridge
+│   ├── App.tsx             routes, bottom nav, error boundary
+│   ├── config.ts           porting constants (API/key/proxy) + settings
+│   ├── types.ts            domain types (Branch, Book, Chapter, DlState…)
+│   ├── catalog.ts          CatalogService → `catalog` (API → cache → snapshot)
+│   ├── net.ts              ApiClient → `api` + streamed PDF download w/ progress
+│   ├── db.ts               ChapterStore → `DB` (IndexedDB files + meta)
+│   ├── downloads/          DownloadQueue → `DL` (queue, concurrency, speed)
+│   ├── lib/
+│   │   ├── titles/         chapter-title parser module (see Architecture)
+│   │   ├── branches.ts     SSOT: branch ids, labels, hidden flag
+│   │   ├── nameFixes.ts    SSOT: upload-side book-name fixes
+│   │   └── format/errors/theme/storage
+│   ├── reader/             Reader.tsx (layout/state) · pdfEngine.ts · usePinchSurface.ts
+│   ├── views/              Home · Branch (+branch/BookCard) · Pick · Book
+│   │                       (+book/rows) · Library · Settings
+│   ├── hooks/              useAsyncData · useDlVersion · useInstallPrompt
+│   ├── components/         app components + ui/ (shadcn, owned code)
+│   └── styles.css          Tailwind 4 entry + theme vars + Bengali fonts
+├── scripts/make-snapshot.ts  regenerates src/catalog-snapshot.json from the API
+│                             (reads lib/branches.ts + lib/nameFixes.ts)
+├── public/                 copied verbatim to dist/ (icons, _redirects)
+├── vite.config.ts          react + tailwind plugins, dev proxy, PWA
+├── bunfig.toml             lint configuration (strict + exceptions)
+└── .github/workflows/      ci · netlify
 ```
 
 ## Architecture rules
 
-- **Dependency direction:** React layer (`main.tsx → App → views/reader →
-{catalog, dlqueue, hooks, components}`) → framework-agnostic core
-  (`{net, db, updater, lib} → config`). No cycles. The download queue lives
-  outside React (downloads continue while navigating); views subscribe through
-  `hooks/useDlVersion` (useSyncExternalStore) and the queue calls back via
-  `DL.onRowUpdate` / `DL.openChapter`.
-- **Framework choice:** React 19 + react-router (HashRouter — works on static
-  hosts and Capacitor without server rewrites) + Tailwind 4 + shadcn/ui
-  (Radix primitives, copied into `src/components/ui/` — they are owned code;
-  edit them freely). The vercel-react-best-practices skill in `skills/`
-  documents the performance patterns (no waterfalls, direct imports over
-  barrels, `void` on fire-and-forget promises).
-- **The service worker is generated** by vite-plugin-pwa (workbox) at build
-  time — do not hand-maintain a precache list; there is no coverage check in
-  CI anymore. Runtime caching for the guide API (network-first) is configured
-  in `vite.config.ts`.
-- **The catalog snapshot** (`src/catalog-snapshot.json`) is a static import —
-  it rides inside the JS bundle, works on any host/base path (including
-  GitHub Pages), and is the offline last-resort for branch/book lists.
-- **PDF downloads on web** go through the same-origin `/pdf/*` reverse proxy
-  (the PDF host sends no CORS headers). Locally that proxy is the vite dev
-  server or `scripts/serve.ts`; in production it is Netlify's `_redirects`.
-  GitHub Pages cannot proxy — the Pages deploy is a demo and the app shows a
-  banner saying so.
-- **Numbers in the UI** go through `bn()` in `utils.ts` (historically Bengali
-  digits; now a pass-through). Keep using it so localization stays one-point.
-- TypeScript is strict; `bun check` must pass with zero errors. Prefer real
-  types over `any`; `requireEl()` replaces non-null assertions for shell elements.
+- **Dependency direction:** React layer (`main → App → views/reader`) →
+  services (`catalog`, `downloads`, `db`, `net`) → `lib` → `config`. No cycles.
+- **One source of truth** (the DRY rule, enforced structurally):
+  - branch labels and which branches ship → `lib/branches.ts`
+    (`make-snapshot.ts` reads it; the Home grid renders the snapshot)
+  - book-name fixes → `lib/nameFixes.ts` (applied by `CatalogService` on every
+    data path AND by `make-snapshot.ts`)
+  - catalog access → `CatalogService` only; views never walk the snapshot
+  - download state → `DownloadQueue` only; views read `DL.stateOf/entries/stats`
+- **Classes own lifecycles:** `CatalogService`, `DownloadQueue`,
+  `ChapterStore`, `ApiClient`, `PdfEngine`. Parsers stay functional
+  (`lib/titles/`).
+- **lib/titles/ module map:** `bengali` (digits, য় normalization) · `ordinals`
+  · `chapterTitle` (parses the API's ~12 ad-hoc upload formats into
+  `{number, label, display, pages, kind}`; noise like "(1)" / underscores /
+  " - এসএসসি …" suffixes is stripped) · `bookName` (strips guide/MCQ/SSC
+  decorations; `isTwin` pairs the MCQ/CQ uploads of one subject) · `streams`
+  (SSC stream grouping) · `mathNames` (official NCTB names for the nameless
+  গণিত গাইড chapters) · `ordering`. Public API: `lib/titles/index.ts`;
+  tests import from `@/lib/titles`.
+- **The download queue lives outside React** (downloads continue while
+  navigating); views subscribe via `useDlVersion` (useSyncExternalStore).
+- **The catalog snapshot** is a static JSON import riding inside the bundle —
+  the offline last resort. Hidden branches (`hidden: true` in branches.ts)
+  never ship.
+- **PDFs** go through the same-origin `/pdf/*` reverse proxy (the PDF host
+  sends no CORS headers): vite dev proxy locally, Netlify `_redirects` in
+  production. The edge serves them brotli-compressed so `content-length` lies;
+  progress uses a 1-byte Range probe for the true total.
+- **Page zoom is disabled** (`user-scalable=no`); the reader is an isolated
+  pan/zoom surface (`usePinchSurface`) — only the canvas moves during a pinch,
+  the chrome stays put, and the crisp pdf.js re-render commits on release.
+- **The service worker** is generated by vite-plugin-pwa at build time; do not
+  hand-maintain a precache list.
 
-## Workflows (all bun-based, all cached)
+## Conventions
+
+- TypeScript strict; `bun check` must pass with zero errors. Real types over
+  `any`; type assertions only at data boundaries, with a comment.
+- Comments: 1–3-line file headers and why-comments — no comment essays; this
+  file carries the extended context instead.
+- Bengali literals in code: build য় from `\u09df` escapes — hand-typed য় is
+  Unicode-form unreliable (decomposed vs precomposed shipped bugs twice).
+  Verify with `codePointAt` when in doubt.
+- Chapter numbers render in **English numerals** (`bnNum` at render points).
+- `eslint-disable` comments are allowed only with a stated reason.
+
+## Workflows
 
 - **CI** (PR + push main): `bun check` · `bun fmt --check` · `bun lint` ·
-  `bun test` · `bun run build` (+ dist artifact), and an Android debug APK job.
-  All jobs: least-privilege `permissions`, SHA-pinned actions (Dependabot bumps
-  them weekly via `.github/dependabot.yml`), `persist-credentials: false`,
-  timeouts, concurrency cancellation, and caches (bun installs + gradle).
-- **Release** (tag `vX.Y.Z`): builds the signed APK (keystore from repo
-  secrets) and publishes the GitHub Release — APK only; the web bundle is
-  deployed by the Netlify/Pages workflows on main, so no zip is attached.
-  `versionCode` = major·10000 + minor·100 + patch. Tag titles are English.
-- **Netlify** (push main): deploys `dist/` via the official
-  `netlify/actions/cli@master`. If the `NETLIFY_AUTH_TOKEN` / `NETLIFY_SITE_ID`
-  secrets are missing, the deploy job shows as **skipped** (gray) — never green
-  without deploying.
-- **Pages** (push main): builds with `VITE_BASE=/Pathagar/` and publishes to
-  GitHub Pages. Demo only (no PDF proxy there).
-
-## Release checklist
-
-1. Bump `APP_VERSION` in `src/config.ts` AND `version` in `package.json` (keep
-   them equal), merge via PR.
-2. `git tag -a vX.Y.Z -m "Pathagar vX.Y.Z — <one line>" && git push origin vX.Y.Z`
-3. The Release workflow publishes `Pathagar-vX.Y.Z.apk` + `pathagar-web-vX.Y.Z.zip`.
-4. Older installs see the update banner (updater checks `releases/latest`).
+  `bun test` · `bun run build` (+ dist artifact). Least-privilege permissions,
+  SHA-pinned actions, Dependabot.
+- **Netlify** (push main): deploys `dist/`. If the `NETLIFY_AUTH_TOKEN` /
+  `NETLIFY_SITE_ID` secrets are missing the deploy job shows as **skipped**
+  (gray) — never green without deploying.
+- **Release:** keep `APP_VERSION` (src/config.ts) and `version`
+  (package.json) equal, merge via PR, then
+  `git tag -a vX.Y.Z -m "Pathagar vX.Y.Z — <one line>" && git push origin vX.Y.Z`
+  and publish the GitHub release with `pathagar-src-vX.Y.Z.zip`
+  (`git archive --format=zip -o … vX.Y.Z`). No APKs, no in-app updater.
 
 ## Gotchas
 
-- **API key rotation:** if the guide API starts returning 403, the upstream
-  app rotated its key. Extract the new one from the latest APK
+- **API key rotation:** if the guide API returns 403, the upstream app rotated
+  its key. Extract the new one from the latest original APK
   (`apkscope decompile <apk> com.nahidnafiz.classninebooks.BuildConfig`) and
-  update `DEFAULT_SETTINGS` in `src/config.ts`; users can also paste a new key
-  in Settings at runtime.
-- **pdfjs-dist is pinned to 6.5.438 exactly** — major versions change the worker
-  and API surface (`canvas` render param, loading-task `destroy()`). Upgrade
-  deliberately, not via `bun update`.
-- **Capacitor is on 8.x** (Java 21 bytecode, SDK 36) — the `android/` project
-  matches the 8.6.2 template. A major upgrade needs the template diff + a full
-  device test.
-- **`bun fmt` formats YAML/JSON/Markdown too** (including workflows, this
-  file and the vendored `skills/`). Run it before pushing; CI checks it.
-- **`bun lint` is strict** (correctness + suspicious + perf as errors — see
-  `bunfig.toml` for the rationale and the two rule exceptions). Fixes go in
-  code, not in rule-offs.
-- **Signing:** the keystore lives in repo secrets, derived from the private
-  `pathagar-release-keystore/` folder. Losing it means future updates can't
-  install over existing installs — keep it backed up.
+  update `API_KEY` in `src/config.ts`.
+- **pdfjs-dist is pinned to 6.5.438 exactly** — major versions change the
+  worker and API surface. Upgrade deliberately, not via `bun update`.
+- **Regenerating the snapshot** (`bun scripts/make-snapshot.ts`) walks the live
+  API and re-bakes every parsed chapter list — run `bun fmt` after, and expect
+  a large diff.
+- **bun lint is strict** (correctness + suspicious + perf as errors; see
+  bunfig.toml for the rationale and the few exceptions). Fixes go in code, not
+  rule-offs.
 
 ## Personal-use scope
 

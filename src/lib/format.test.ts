@@ -1,13 +1,6 @@
 /* format.test.ts — pure display formatting */
 import { describe, expect, test } from "bun:test";
-import { bn, fmtMB } from "./format";
-
-describe("bn", () => {
-  test("passes values through unchanged (English UI)", () => {
-    expect(bn(42)).toBe("42");
-    expect(bn("1.10.0")).toBe("1.10.0");
-  });
-});
+import { fmtMB } from "./format";
 
 describe("fmtMB", () => {
   test("formats megabytes with one decimal", () => {

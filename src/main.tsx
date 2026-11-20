@@ -1,13 +1,13 @@
-/* main.tsx — composition root: React mount, theme, SW registration, guards */
+/* main.tsx — composition root: React mount, theme, SW registration, guards. */
 
 // eslint-disable-next-line import/no-unassigned-import -- css side-effect import (vite)
 import "@/styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
-import { S } from "@/config";
+import { settings } from "@/config";
 import { applyTheme } from "@/lib/theme";
-import { DL } from "@/dlqueue";
+import { DL } from "@/downloads";
 import { dlDialog } from "@/components/DownloadsPopup";
 import App from "@/App";
 
@@ -20,16 +20,13 @@ DL.openChapter = (id) => {
 
 /* don't close the tab while downloads are running */
 window.addEventListener("beforeunload", (e) => {
-  const busy = [...S.dl.values()].some(
-    (s) => s.status === "downloading" || s.status === "queued",
-  );
-  if (busy) {
+  if (DL.busy()) {
     e.preventDefault();
     e.returnValue = "";
   }
 });
 
-applyTheme(S.settings.theme);
+applyTheme(settings.theme);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
