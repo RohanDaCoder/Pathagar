@@ -2,7 +2,7 @@
    pdf.js (npm pdfjs-dist@3.11, same 3.11 family as the old vendored copy) is
    dynamically imported so it lands in a lazy chunk with its own worker URL. */
 import { NATIVE } from "./config";
-import { $, bn, esc, toast } from "./utils";
+import { $, bn, esc, toast, errMessage } from "./utils";
 import { DB } from "./db";
 import type { ChapterMeta } from "./types";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
@@ -78,8 +78,8 @@ async function renderPdfPage() {
   R.task = page.render({ canvasContext: ctx, viewport: vp });
   const pg = $("#rpg");
   if (pg) pg.textContent = `${bn(R.page)} / ${bn(R.doc.numPages)}`;
-  const prev = $("#rprev") as HTMLButtonElement | null;
-  const next = $("#rnext") as HTMLButtonElement | null;
+  const prev = $<HTMLButtonElement>("#rprev");
+  const next = $<HTMLButtonElement>("#rnext");
   if (prev) prev.disabled = R.page <= 1;
   if (next) next.disabled = R.page >= R.doc.numPages;
   try {
@@ -132,12 +132,12 @@ export async function openReader(id: string | number) {
     const data = new Uint8Array(await blob.arrayBuffer());
     doc = await lib.getDocument({ data }).promise;
   } catch (e) {
-    toast(`Could not open PDF: ${(e as Error).message || ""}`, "err");
+    toast(`Could not open PDF: ${errMessage(e)}`, "err");
     closeReader();
     return;
   }
   if (!rd.classList.contains("open")) {
-    doc.destroy?.();
+    void doc.destroy?.();
     return;
   } // closed meanwhile
   R = { doc, page: 1, scale: 0, fit: 0, id, meta, task: null, taskId: 0 };
@@ -147,7 +147,7 @@ export async function openReader(id: string | number) {
   $("#rprev")?.addEventListener("click", () => {
     if (R && R.page > 1) {
       R.page--;
-      renderPdfPage();
+      void renderPdfPage();
       const w = $("#rwrap");
       if (w) w.scrollTop = 0;
     }
@@ -155,7 +155,7 @@ export async function openReader(id: string | number) {
   $("#rnext")?.addEventListener("click", () => {
     if (R && R.page < R.doc.numPages) {
       R.page++;
-      renderPdfPage();
+      void renderPdfPage();
       const w = $("#rwrap");
       if (w) w.scrollTop = 0;
     }
@@ -163,16 +163,16 @@ export async function openReader(id: string | number) {
   $("#rzin")?.addEventListener("click", () => {
     if (R) {
       R.scale = Math.min(4, R.scale * 1.25);
-      renderPdfPage();
+      void renderPdfPage();
     }
   });
   $("#rzout")?.addEventListener("click", () => {
     if (R) {
       R.scale = Math.max(0.25, R.scale / 1.25);
-      renderPdfPage();
+      void renderPdfPage();
     }
   });
-  const ropen = $("#ropen");
+  const ropen = $<HTMLButtonElement>("#ropen");
   if (ropen)
     ropen.addEventListener("click", async () => {
       const b = await DB.getFile(id);
@@ -202,10 +202,10 @@ export async function openReader(id: string | number) {
       if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
         if (dx < 0 && R.page < R.doc.numPages) {
           R.page++;
-          renderPdfPage();
+          void renderPdfPage();
         } else if (dx > 0 && R.page > 1) {
           R.page--;
-          renderPdfPage();
+          void renderPdfPage();
         }
       }
     },
@@ -216,10 +216,10 @@ export async function openReader(id: string | number) {
 document.addEventListener("keydown", (e) => {
   if (!R || !$("#reader")?.classList.contains("open")) return;
   if (e.key === "ArrowRight" || e.key === "PageDown")
-    ($("#rnext") as HTMLButtonElement | null)?.click();
+    $<HTMLButtonElement>("#rnext")?.click();
   else if (e.key === "ArrowLeft" || e.key === "PageUp")
-    ($("#rprev") as HTMLButtonElement | null)?.click();
+    $<HTMLButtonElement>("#rprev")?.click();
   else if (e.key === "Escape") closeReader();
-  else if (e.key === "+") ($("#rzin") as HTMLButtonElement | null)?.click();
-  else if (e.key === "-") ($("#rzout") as HTMLButtonElement | null)?.click();
+  else if (e.key === "+") $<HTMLButtonElement>("#rzin")?.click();
+  else if (e.key === "-") $<HTMLButtonElement>("#rzout")?.click();
 });

@@ -98,7 +98,7 @@ export async function renderHome() {
     );
     $("#upd-skip")?.addEventListener("click", () => {
       skipVersion(upd.latest);
-      renderHome();
+      void renderHome();
     });
   }
   $$(".branch-card").forEach((el) => {

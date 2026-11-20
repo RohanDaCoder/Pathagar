@@ -43,7 +43,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
       headers: { Accept: "application/vnd.github+json" },
     });
     if (!r.ok) return null;
-    const rel = (await r.json()) as GhRelease;
+    const rel: GhRelease = await r.json();
     const latest = (rel.tag_name || "").replace(/^v/, "");
     if (!isNewer(APP_VERSION, latest)) return null;
     const apk = (rel.assets || []).find((a) => /\.apk$/i.test(a.name || ""));

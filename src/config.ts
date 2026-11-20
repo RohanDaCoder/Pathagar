@@ -25,18 +25,39 @@ export const DEFAULT_SETTINGS: Settings = {
   concurrency: 2,
 };
 
-/* localStorage is absent under `bun test` — guard so the module imports cleanly */
-const stored =
-  typeof localStorage !== "undefined"
-    ? localStorage.getItem("ptg:settings")
-    : null;
+/* localStorage is absent under `bun test` and can throw in private mode */
+function loadSettings(): Settings {
+  const s = { ...DEFAULT_SETTINGS };
+  let raw: string | null = null;
+  try {
+    raw =
+      typeof localStorage === "undefined"
+        ? null
+        : localStorage.getItem("ptg:settings");
+  } catch {
+    /* storage unavailable — defaults are fine */
+  }
+  if (!raw) return s;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null) {
+      for (const [k, v] of Object.entries(
+        parsed as Record<string, unknown>, // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- narrowing `object` for entry iteration
+      )) {
+        if (k in s && typeof v === typeof (s as Record<string, unknown>)[k]) {
+          (s as Record<string, unknown>)[k] = v;
+        }
+      }
+    }
+  } catch {
+    /* corrupted settings — fall back to defaults */
+  }
+  return s;
+}
 
-/* global mutable app state (single source of truth) */
+/* app-wide mutable state (single source of truth) */
 export const S = {
-  settings: {
-    ...DEFAULT_SETTINGS,
-    ...(JSON.parse(stored || "{}") as Partial<Settings>),
-  },
+  settings: loadSettings(),
   snapshot: null as Snapshot | null, // bundled offline catalog (loaded in catalog.ts)
   route: { name: "home", args: [] as string[] },
   dl: new Map<string, DlState>(), // chapterId -> download state

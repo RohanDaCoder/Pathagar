@@ -11,7 +11,8 @@ original "Class 9 All Subject Books" app's server (reverse-engineered);
 this repo contains code and config only — never PDFs or other copyrighted
 content, and the project is for students' personal study.
 
-- App ID: `com.pathagar.app` · Repository: `RohanDaCoder/Pathagar`
+- App ID: `me.rohandacoder.pathagar` · Repository: `RohanDaCoder/Pathagar`
+- npm package name: `me.rohandacoder.pathagar`
 - The in-app updater reads `releases/latest` from this repo and links the APK.
 
 ## Toolchain (bun-first)
@@ -21,7 +22,7 @@ content, and the project is for students' personal study.
 | Package manager / runtime | bun 1.4.5 (pinned in CI)                  | `bun install`, `bunx …`                 |
 | Type check                | bun's native checker (same errors as tsc) | `bun check`                             |
 | Format                    | bun's built-in formatter (Prettier-like)  | `bun fmt` / `bun fmt --check`           |
-| Lint                      | Biome (bun has no built-in lint)          | `bun run lint` / `bun run lint:fix`     |
+| Lint                      | bun built-in linter (strict, bunfig.toml) | `bun lint` / `bun lint --fix`           |
 | Unit tests                | bun test                                  | `bun test`                              |
 | Dev server                | vite 8 (proxies `/pdf/*` to the PDF host) | `bun run dev` → http://127.0.0.1:5173   |
 | Build                     | vite 8 → `dist/`                          | `bun run build`                         |
@@ -30,16 +31,21 @@ content, and the project is for students' personal study.
 
 `typescript@7` is a devDependency for editor tooling (tsserver) and a
 cross-check (`bunx tsc --noEmit`); CI uses `bun check` because it is faster.
+The `bun` version is pinned in CI to the **1.4.6 line (canary)** — that is the
+release that ships the built-in linter; move the pin to `1.4.6` stable once it
+lands on npm.
 
 Run the full local gate before pushing — this is exactly what CI runs:
 
 ```bash
-bun check && bun fmt --check && bun run lint && bun test && bun run build
+bun check && bun fmt --check && bun lint && bun test && bun run build
 ```
 
 ## Project layout
 
 ```
+├── skills/               vendored agent skills (github-actions-*, shadcn-ui,
+│                         react-best-practices, web-design-guidelines, find-skills)
 ├── index.html            vite entry (app shell, CSP, bottom nav)
 ├── src/                  TypeScript sources (no framework, hash-routed)
 │   ├── main.ts           composition root: router + view dispatch + SW registration
@@ -58,7 +64,7 @@ bun check && bun fmt --check && bun run lint && bun test && bun run build
 ├── scripts/serve.ts      Bun.serve: dist + /pdf proxy (local prod preview)
 ├── android/              Capacitor 6 project (webDir = dist)
 ├── vite.config.ts        dev proxy, PWA (vite-plugin-pwa), VITE_BASE for Pages
-├── biome.json            lint only (formatter is OFF — `bun fmt` owns formatting)
+├── bunfig.toml           lint configuration (strict categories)
 └── .github/workflows/    ci · release · netlify · pages
 ```
 
@@ -86,7 +92,7 @@ bun check && bun fmt --check && bun run lint && bun test && bun run build
 
 ## Workflows (all bun-based, all cached)
 
-- **CI** (PR + push main): `bun check` · `bun fmt --check` · `bun run lint` ·
+- **CI** (PR + push main): `bun check` · `bun fmt --check` · `bun lint` ·
   `bun test` · `bun run build` (+ dist artifact), and an Android debug APK job
   (gradle cache via `actions/cache`; bun cache via `setup-bun`).
 - **Release** (tag `vX.Y.Z`): builds web + signed APK (keystore from repo
@@ -118,8 +124,11 @@ bun check && bun fmt --check && bun run lint && bun test && bun run build
   API surface. Upgrade deliberately, not via `bun update`.
 - **Capacitor stays on 6.x** — the `android/` project was generated for it.
   A major upgrade needs `cap migrate` and a full device test.
-- **`bun fmt` formats YAML/JSON/Markdown too** (including workflows and this
-  file). Run it before pushing; CI checks it.
+- **`bun fmt` formats YAML/JSON/Markdown too** (including workflows, this
+  file and the vendored `skills/`). Run it before pushing; CI checks it.
+- **`bun lint` is strict** (correctness + suspicious + perf as errors — see
+  `bunfig.toml` for the rationale and the two rule exceptions). Fixes go in
+  code, not in rule-offs.
 - **Signing:** the keystore lives in repo secrets, derived from the private
   `pathagar-release-keystore/` folder. Losing it means future updates can't
   install over existing installs — keep it backed up.

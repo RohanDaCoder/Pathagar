@@ -5,7 +5,7 @@
 ## Testing
 
 - [ ] Web: `bun run dev` (or `bun run build && bun run serve` → http://127.0.0.1:4173) — lists, download, offline read
-- [ ] `bun check && bun fmt --check && bun run lint && bun test && bun run build` all pass
+- [ ] `bun check && bun fmt --check && bun lint && bun test && bun run build` all pass
 - [ ] Android: `bun run build && bun run cap:sync && bun run build:apk` (CI builds the debug APK too)
 - [ ] CI is green
 

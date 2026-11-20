@@ -3,6 +3,7 @@
      DL.onRowUpdate  = fn(chapterId)   — set by the book view, re-paints a row
      DL.openChapter  = fn(chapterId)   — set by main.ts, opens the reader */
 import { S } from "./config";
+import { errMessage, errStatus } from "./utils";
 import { downloadPdf, pdfFetchUrl } from "./net";
 import { DB } from "./db";
 import type { Book, Chapter, DlState } from "./types";
@@ -65,7 +66,7 @@ export const DL: DLApi = {
       const job = this.queue.shift();
       if (!job) break;
       this.active++;
-      this.run(job).finally(() => {
+      void this.run(job).finally(() => {
         this.active--;
         this.pump();
       });
@@ -130,13 +131,14 @@ export const DL: DLApi = {
         this.openChapter?.(id);
       }
     } catch (e) {
-      const err = e as Error & { status?: number };
-      if (err?.name === "AbortError" || st.cancelled) {
+      if ((e instanceof Error && e.name === "AbortError") || st.cancelled) {
         S.dl.delete(id);
       } else {
         st.status = "error";
         st.error =
-          err?.status === 403 ? "Key changed? (403)" : err.message || "Failed";
+          errStatus(e) === 403
+            ? "Key changed? (403)"
+            : errMessage(e) || "Failed";
       }
       this.onRowUpdate?.(id);
     }

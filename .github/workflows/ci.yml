@@ -13,12 +13,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.5 # cache: enabled by default, keyed on bun.lock
+          bun-version: 1.4.5-canary.20261119.1 # 1.4.6 line: ships the built-in linter; cache enabled by default, keyed on bun.lock
 
       - run: bun install --frozen-lockfile
       - run: bun check # native typecheck (same errors as tsc, all cores)
       - run: bun fmt --check
-      - run: bun run lint # biome (bun has no built-in lint command)
+      - run: bun lint # built-in linter, strict profile in bunfig.toml
       - run: bun test
       - run: bun run build
 
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.5
+          bun-version: 1.4.5-canary.20261119.1
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

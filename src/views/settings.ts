@@ -17,6 +17,7 @@ import {
   fmtMB,
   toast,
   viewHead,
+  errMessage,
   storageEstimate,
 } from "../utils";
 import { DB } from "../db";
@@ -96,7 +97,7 @@ export async function renderSettings() {
     <div class="footnote">${APP_NAME} · ${new Date().getFullYear()}</div>
   </div>`;
   $("#s-eye")?.addEventListener("click", () => {
-    const k = $("#s-key") as HTMLInputElement | null;
+    const k = $<HTMLInputElement>("#s-key");
     const eye = $("#s-eye");
     if (!k || !eye) return;
     const showing = k.dataset.show === "1";
@@ -104,12 +105,12 @@ export async function renderSettings() {
     eye.textContent = showing ? "Show" : "Hide";
   });
   $("#s-save")?.addEventListener("click", async () => {
-    const api = $("#s-api") as HTMLInputElement | null;
-    const key = $("#s-key") as HTMLInputElement | null;
-    const proxy = $("#s-proxy") as HTMLInputElement | null;
-    const pp = $("#s-pp") as HTMLInputElement | null;
-    const conc = $("#s-conc") as HTMLSelectElement | null;
-    const theme = $("#s-theme") as HTMLSelectElement | null;
+    const api = $<HTMLInputElement>("#s-api");
+    const key = $<HTMLInputElement>("#s-key");
+    const proxy = $<HTMLInputElement>("#s-proxy");
+    const pp = $<HTMLInputElement>("#s-pp");
+    const conc = $<HTMLSelectElement>("#s-conc");
+    const theme = $<HTMLSelectElement>("#s-theme");
     S.settings.apiUrl = api?.value.trim() || DEFAULT_SETTINGS.apiUrl;
     S.settings.apiKey = key?.value.trim() || DEFAULT_SETTINGS.apiKey;
     if (!NATIVE) {
@@ -124,15 +125,15 @@ export async function renderSettings() {
     if (!out) return;
     out.innerHTML = '<span class="spinner"></span>';
     try {
-      const d = (await apiGet("categories", {
+      const d = await apiGet<ApiEnvelope<unknown>>("categories", {
         parent: 18203,
         limit: 1,
-      })) as ApiEnvelope<unknown>;
+      });
       out.innerHTML = `<span class="chip ok">Connection OK (${bn((d.data || []).length)} items)</span>`;
       toast("Settings saved — API is working", "ok");
     } catch (e) {
-      out.innerHTML = `<span class="chip warn">Failed: ${esc((e as Error).message)}</span>`;
-      toast(`API test failed: ${(e as Error).message}`, "err");
+      out.innerHTML = `<span class="chip warn">Failed: ${esc(errMessage(e))}</span>`;
+      toast(`API test failed: ${errMessage(e)}`, "err");
     }
   });
   $("#s-upd")?.addEventListener("click", async () => {
@@ -149,17 +150,18 @@ export async function renderSettings() {
       );
   });
   $("#s-theme")?.addEventListener("change", () => {
-    const theme = $("#s-theme") as HTMLSelectElement | null;
+    const theme = $<HTMLSelectElement>("#s-theme");
     S.settings.theme = theme?.value || "auto";
     saveSettings();
     applyTheme();
   });
   $("#s-clear")?.addEventListener("click", async (e) => {
-    const b = e.currentTarget as HTMLButtonElement;
+    const b = e.currentTarget;
+    if (!(b instanceof HTMLButtonElement)) return;
     if (b.dataset.confirm) {
       await DB.clearAll();
       toast("All downloads deleted");
-      renderSettings();
+      void renderSettings();
     } else {
       b.dataset.confirm = "1";
       b.textContent = "Sure? Tap again";

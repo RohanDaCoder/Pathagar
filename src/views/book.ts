@@ -12,6 +12,8 @@ import {
   toast,
   viewHead,
   crumbs,
+  errMessage,
+  errStatus,
   svgDownload,
   svgCheck,
   svgRetry,
@@ -64,7 +66,7 @@ export function chapterRowHtml(i: number, ch: Chapter): string {
 
 function paintBookToolbar() {
   const bar = $("#bookbar");
-  const btn = $("#dlallbtn");
+  const btn = $<HTMLButtonElement>("#dlallbtn");
   if (!bar || !BookPage) return;
   const total = BookPage.chapters.length;
   let done = 0;
@@ -86,33 +88,34 @@ function paintBookToolbar() {
       done >= total && total
         ? `${svgCheck} Done`
         : `${svgDownload} Download all (${bn(done)}/${bn(total)})`;
-    (btn as HTMLButtonElement).disabled = done >= total && total > 0;
+    btn.disabled = done >= total && total > 0;
   }
 }
 
 /* chapter rows carry their chapter/book wiring as expando props */
 interface WiredRow extends HTMLElement {
-  _ch?: Chapter;
-  _book?: Book;
-  _chIndex?: number;
+  chapterRef?: Chapter;
+  bookRef?: Book;
+  indexRef?: number;
 }
 
 function wireRow(row: HTMLElement, ch: Chapter, book: Book, i: number) {
   const w = row as WiredRow;
-  w._ch = ch;
-  w._book = book;
-  w._chIndex = i;
+  w.chapterRef = ch;
+  w.bookRef = book;
+  w.indexRef = i;
   row.addEventListener("click", (ev) => {
-    const act = (ev.target as Element)
-      .closest("[data-act]")
-      ?.getAttribute("data-act");
+    const act =
+      ev.target instanceof Element
+        ? ev.target.closest("[data-act]")?.getAttribute("data-act")
+        : undefined;
     const id = String(ch.id);
     if (act === "cancel") {
       DL.cancel(id);
       return;
     }
     if (act === "read" || BookPage?.saved.has(id)) {
-      openReader(id);
+      void openReader(id);
       return;
     }
     DL.enqueue(ch, book, { autoOpen: true });
@@ -123,17 +126,13 @@ function wireRow(row: HTMLElement, ch: Chapter, book: Book, i: number) {
 function updateChapterRow(id: string) {
   const row = $(`.row[data-ch="${id}"]`);
   if (!row) return;
-  let {
-    _ch: ch,
-    _book: book,
-    _chIndex: i,
-  } = row as typeof row & { _ch: Chapter; _book: Book; _chIndex: number };
+  let { chapterRef: ch, bookRef: book, indexRef: i } = row as WiredRow;
   if ((!ch || !book) && BookPage) {
     i = Number.parseInt(row.dataset.i || "0", 10);
     ch = BookPage.chapters[i];
     book = BookPage.book;
   }
-  if (!ch || !book) return;
+  if (!ch || !book || i === undefined) return;
   const st = S.dl.get(id);
   if (st?.status === "done" && BookPage) {
     BookPage.saved.add(id);
@@ -147,7 +146,7 @@ function updateChapterRow(id: string) {
 DL.onRowUpdate = updateChapterRow;
 
 export async function renderBook(bookId: string | undefined) {
-  const ctx = bookId ? S.bookCtx.get(String(bookId)) : undefined;
+  const ctx = bookId ? S.bookCtx.get(bookId) : undefined;
   const snap = loadSnapshot();
   let bookName = ctx?.name;
   let branchId = ctx?.branchId;
@@ -176,10 +175,9 @@ export async function renderBook(bookId: string | undefined) {
   try {
     data = await getChapters(bookId || "");
   } catch (e) {
-    const err = e as Error & { status?: number };
     requireEl("#rows").innerHTML =
       `<div class="empty">${svgWarn}<div class="t">Couldn't load the chapter list</div>
-      <div>${err.status === 403 ? "API key revoked — set a new one in Settings." : esc(err.message || "Network problem")}</div></div>`;
+      <div>${errStatus(e) === 403 ? "API key revoked — set a new one in Settings." : esc(errMessage(e) || "Network problem")}</div></div>`;
     return;
   }
   const metas = (await DB.allMeta()).filter((m) => m.bookId === String(bookId));
