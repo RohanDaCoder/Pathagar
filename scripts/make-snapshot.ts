@@ -11,11 +11,16 @@ import {
 } from "../src/lib/titles";
 
 const API = "https://books.tetashweb.xyz/api/v1/app/";
+/* Upload-side name fixes applied before parsing, so regenerating the
+   snapshot keeps them (API names with mixed English/Bengali spelling). */
+const NAME_FIXES: Record<string, string> = {
+  "বাংলা 2nd পত্র গাইড (SSC 2028)": "বাংলা ২য় পত্র গাইড (SSC 2028)",
+};
 // The key ships in the original app; see AGENTS.md before changing endpoints.
 const KEY = "qbznP4XjGALmagvQOOlN5zVZmcovJfHPE1a3xHmPnV2B9eQz52yC3wm7nVbqqyG3";
 /* branch roots of the guide tree (see the Stage-1 report) */
 const BRANCHES: { id: number; label: string }[] = [
-  { id: 18203, label: "জেনারেলের গাইড (General Guide, SSC 2028)" },
+  { id: 18203, label: "Bangla Version (SSC 2028)" },
   { id: 17786, label: "মাদ্রাসার গাইড (Madrasah Guide)" },
   { id: 17794, label: "English Version Guide (Nine)" },
   { id: 101, label: "নবম শ্রেণীর গাইড, পুরাতন (Older guide set)" },
@@ -99,9 +104,10 @@ for (const br of BRANCHES) {
   const branchBooks = await get("categories", { parent: br.id, limit: 200 });
   const booksRaw = (branchBooks.data || []).filter(isBook);
   const books = [];
-  for (const bk of booksRaw.toSorted(
+  for (const rawBook of booksRaw.toSorted(
     (a, b) => (a.order ?? 0) - (b.order ?? 0),
   )) {
+    const bk = { ...rawBook, name: NAME_FIXES[rawBook.name] ?? rawBook.name };
     // eslint-disable-next-line no-await-in-loop -- chapters of one book load sequentially
     const raw = await chaptersOf(bk.id);
     const parsed = raw
