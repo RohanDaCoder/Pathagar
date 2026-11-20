@@ -4,6 +4,11 @@
 # or drag a local `bun run build` output here: https://app.netlify.com/drop
 
 [build]
+# self-gating: the same checks CI runs gate every Netlify build (production
+# AND deploy previews) — a red check/test can never ship a deploy.
+# Netlify's image ships an older bun (no `bun check`), so pin the same
+# canary CI installs first.
+command = "npm install -g bun@1.4.5-canary.20261119.1 && bun install --frozen-lockfile && bun check && bun test && bun run build"
 publish = "dist"
 
 # PDF reverse proxy.

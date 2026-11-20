@@ -130,14 +130,19 @@ gh secret set KEY_PASSWORD  < pathagar-release-keystore/PASSWORD.txt
 
 ## Web deploys
 
-**Netlify (primary home):** the `netlify.yml` workflow builds `dist/` and
-deploys it with the official [netlify/actions](https://github.com/netlify/actions)
-CLI action on every push to `main`. Until the `NETLIFY_AUTH_TOKEN` /
-`NETLIFY_SITE_ID` secrets are set, the deploy job shows as **skipped** (gray) —
-by design, so the workflow can never look green without having deployed.
-Netlify matters because its `/pdf/*` proxy is what makes chapter downloads work
-in browsers. Manual alternative: `bun run build` and drag `dist/` to
-[app.netlify.com/drop](https://app.netlify.com/drop).
+**Netlify (primary home):** the site is linked to this repository through
+Netlify's GitHub integration — every push to `main` builds and publishes
+production, and every PR gets a **deploy preview** URL
+(`deploy-preview-<n>--pathagarz.netlify.app`). The build command in
+`netlify.toml` runs the same `bun check` / `bun test` gate CI runs, so a red
+check can never ship. Production deploys are git-only
+(`prevent_non_git_prod_deploys`), which is why there is no deploy step in
+GitHub Actions: the CLI-upload workflow shipped earlier could never deploy
+and was removed. Netlify matters because its `/pdf/*` proxy is what makes
+chapter downloads work in browsers. Manual alternative: `bun run build` and
+drag `dist/` to [app.netlify.com/drop](https://app.netlify.com/drop).
+The `NETLIFY_AUTH_TOKEN` / `NETLIFY_SITE_ID` repo secrets are kept for
+`netlify` CLI operations against the site.
 
 **GitHub Pages (demo mirror):** the `pages.yml` workflow publishes the app to
 `https://<user>.github.io/Pathagar/` (built with `VITE_BASE=/Pathagar/`).
