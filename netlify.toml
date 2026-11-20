@@ -1,8 +1,10 @@
 # Pathagar — Netlify configuration
-# The web app is the same `www/` folder that the Android app wraps.
+# The web app is the vite build output (dist/); Capacitor wraps the same bundle
+# into the Android app. Deploy with the CLI action (.github/workflows/netlify.yml)
+# or drag a local `bun run build` output here: https://app.netlify.com/drop
 
 [build]
-  publish = "www"
+publish = "dist"
 
 # PDF reverse proxy.
 # The guide-book PDF host (pdf.tetashweb.xyz) does NOT send CORS headers, so the
@@ -11,23 +13,23 @@
 # The API host (books.tetashweb.xyz) already sends Access-Control-Allow-Origin: *,
 # so it is called directly and needs no proxy.
 [[redirects]]
-  from = "/pdf/*"
-  to = "https://pdf.tetashweb.xyz/:splat"
-  status = 200
-  force = true
+from = "/pdf/*"
+to = "https://pdf.tetashweb.xyz/:splat"
+status = 200
+force = true
 
 # PWA: never cache the manifest itself, and SPA fallback to index.html
 [[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
 
 [[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Cache-Control = "no-cache"
+for = "/sw.js"
+[headers.values]
+Cache-Control = "no-cache"
 
 [[headers]]
-  for = "/manifest.webmanifest"
-  [headers.values]
-    Cache-Control = "no-cache"
+for = "/manifest.webmanifest"
+[headers.values]
+Cache-Control = "no-cache"

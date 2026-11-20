@@ -5,7 +5,7 @@ name: Release
 # The in-app updater reads the "latest" release of this repo.
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -16,19 +16,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
+          bun-version: 1.4.5 # cache: enabled by default, keyed on bun.lock
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
       - uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools   # legacy 'tools' package was removed from the SDK repo
+          packages: platform-tools # legacy 'tools' package was removed from the SDK repo
 
-      - run: npm ci
-      - run: npx cap sync android
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/*.gradle*', 'android/app/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bun run cap:sync
 
       - name: Decode signing keystore
         env:
@@ -57,7 +67,7 @@ jobs:
         run: cp android/app/build/outputs/apk/release/app-release.apk "Pathagar-v${VERSION_NAME}.apk"
 
       - name: Package web bundle
-        run: cd www && zip -rq "../pathagar-web-v${VERSION_NAME}.zip" .
+        run: cd dist && zip -rq "../pathagar-web-v${VERSION_NAME}.zip" .
 
       - name: Create GitHub Release
         env:

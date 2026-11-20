@@ -1,26 +1,56 @@
 name: Deploy Web (Netlify)
 
-# Optional: deploys www/ to Netlify on every push to main.
-# No-op until the orchestrator sets the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID
-# repo secrets (README → "Web deploy" section explains how).
+# Deploys the built web app (dist/) to Netlify on every push to main, using the
+# official netlify/actions CLI action. Netlify is the PRIMARY web home: its
+# /pdf/* reverse proxy (public/_redirects) is what makes PDF downloads work in
+# browsers — the PDF host sends no CORS headers.
+#
+# Until the orchestrator sets the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repo
+# secrets, the deploy job shows as SKIPPED (gray), not green — that is
+# deliberate: this workflow must never look successful without having deployed.
+# (README → "Web deploy" explains how to set the secrets.)
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy www/ to Netlify
+  secrets-check:
+    name: Netlify secrets present?
     runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy
+      - name: Check secrets
+        id: check
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
-          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
-            echo "::notice::Netlify secrets not set (NETLIFY_AUTH_TOKEN / NETLIFY_SITE_ID) — skipping web deploy. See README → Web deploy."
-            exit 0
+          if [ -n "$NETLIFY_AUTH_TOKEN" ] && [ -n "$NETLIFY_SITE_ID" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Netlify deploy SKIPPED — the NETLIFY_AUTH_TOKEN / NETLIFY_SITE_ID secrets are not set (Settings → Secrets and variables → Actions). The Deploy job below will show as 'skipped'."
           fi
-          npx --yes netlify-cli deploy --dir=www --prod
+
+  deploy:
+    name: Deploy dist → Netlify
+    needs: secrets-check
+    if: needs.secrets-check.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5 # cache: enabled by default, keyed on bun.lock
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - name: Deploy to Netlify (official action)
+        uses: netlify/actions/cli@master
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        with:
+          args: deploy --dir=dist --prod
