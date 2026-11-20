@@ -24,6 +24,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools   # legacy 'tools' package was removed from the SDK repo
 
       - run: npm ci
       - run: npx cap sync android
