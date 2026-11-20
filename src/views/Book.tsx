@@ -87,9 +87,7 @@ function buildRows(chs: Chapter[], bk: Book): Row[] {
     its leading chapter number ("২. সেট ও ফাংশন — অংশ ১" → "সেট ও ফাংশন") */
 function parentTitle(parts: Chapter[]): string {
   const d = parts[0]?.display || "";
-  const stripped = stripLeadNum(
-    d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim(),
-  );
+  const stripped = stripLeadNum(d.replace(/ ?— ?অংশ ?[০-৯0-9]+$/, "").trim());
   return stripped || parts[0]?.label || "Chapter";
 }
 
