@@ -10,6 +10,8 @@ export async function renderHome() {
   const snap = await loadSnapshot();
   const metas = await DB.allMeta();
   const totalMB = metas.reduce((a, m) => a + (m.size || 0), 0);
+  const savedByBranch = {};
+  metas.forEach(m => { if (m.branchId) savedByBranch[m.branchId] = (savedByBranch[m.branchId] || 0) + 1; });
   const upd = await checkForUpdate();
 
   const banner = (upd && !upd.skipped) ? `
@@ -40,6 +42,7 @@ export async function renderHome() {
           <div style="min-width:0">
             <h3>${esc(b.label.replace(/\s*\(.*?\)\s*$/, ''))}</h3>
             <div class="meta">${bn(b.books.length)} বই · ${bn(b.total_chapters)} অধ্যায়</div>
+            ${savedByBranch[b.id] ? `<div style="margin-top:4px"><span class="chip ok">✓ ${bn(savedByBranch[b.id])} অধ্যায় সেভ</span></div>` : ''}
           </div>
           ${svgChev}
         </div>`).join('')}
