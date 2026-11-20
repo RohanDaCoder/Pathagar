@@ -190,13 +190,9 @@ export function Book() {
             <>
               {fronts.length ? <SectionLabel text="Contents" /> : null}
               {fronts.map((ch) => chapterRow(ch))}
-              {chapters.length ? (
-                <SectionLabel text="Chapters" />
-              ) : null}
+              {chapters.length ? <SectionLabel text="Chapters" /> : null}
               {chapters.map((ch) => chapterRow(ch))}
-              {extras.length ? (
-                <SectionLabel text="Exam & practice" />
-              ) : null}
+              {extras.length ? <SectionLabel text="Exam & practice" /> : null}
               {extras.map((ch) => chapterRow(ch))}
             </>
           )}

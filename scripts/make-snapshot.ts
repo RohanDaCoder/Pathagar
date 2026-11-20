@@ -50,9 +50,12 @@ async function get(path: string, params: Record<string, string | number>) {
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
   // API boundary: guide API's documented envelope; validated by Stage-1 harness
   const env: unknown = await r.json();
-  const data = typeof env === "object" && env !== null ? Reflect.get(env, "data") : null;
+  const data =
+    typeof env === "object" && env !== null ? Reflect.get(env, "data") : null;
   const rawPg =
-    typeof env === "object" && env !== null ? Reflect.get(env, "pagination") : null;
+    typeof env === "object" && env !== null
+      ? Reflect.get(env, "pagination")
+      : null;
   const totalPage =
     typeof rawPg === "object" && rawPg !== null
       ? Reflect.get(rawPg, "total_page")
@@ -60,9 +63,7 @@ async function get(path: string, params: Record<string, string | number>) {
   return {
     data: Array.isArray(data) ? data : [],
     pagination:
-      totalPage === undefined
-        ? undefined
-        : { total_page: `${totalPage}` },
+      totalPage === undefined ? undefined : { total_page: `${totalPage}` },
   };
 }
 
@@ -93,7 +94,9 @@ for (const br of BRANCHES) {
   const branchBooks = await get("categories", { parent: br.id, limit: 200 });
   const booksRaw = (branchBooks.data || []).filter(isBook);
   const books = [];
-  for (const bk of booksRaw.toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0))) {
+  for (const bk of booksRaw.toSorted(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  )) {
     // eslint-disable-next-line no-await-in-loop -- chapters of one book load sequentially
     const raw = await chaptersOf(bk.id);
     const parsed = raw

@@ -29,13 +29,17 @@ describe("parseTitle — numbered formats", () => {
   });
 
   test("অধ্যায়-০১ prefix form", () => {
-    const p = parseTitle("অধ্যায়-০১ গৌতম বুদ্ধের জীবন ও শিক্ষা - এসএসসি বৌদ্ধধর্ম শিক্ষা");
+    const p = parseTitle(
+      "অধ্যায়-০১ গৌতম বুদ্ধের জীবন ও শিক্ষা - এসএসসি বৌদ্ধধর্ম শিক্ষা",
+    );
     expect(p.number).toBe(1);
     expect(p.display).toBe("গৌতম বুদ্ধের জীবন ও শিক্ষা");
   });
 
   test("অধ্যায় ১ - name with spaceless Pages", () => {
-    const p = parseTitle("অধ্যায় ১ - তথ্য ও যোগাযোগ প্রযুক্তি ও আমাদের বাংলাদেশ Pages-9-66");
+    const p = parseTitle(
+      "অধ্যায় ১ - তথ্য ও যোগাযোগ প্রযুক্তি ও আমাদের বাংলাদেশ Pages-9-66",
+    );
     expect(p.number).toBe(1);
     expect(p.display).toBe("তথ্য ও যোগাযোগ প্রযুক্তি ও আমাদের বাংলাদেশ");
     expect(p.pageStart).toBe(9);
@@ -45,7 +49,9 @@ describe("parseTitle — numbered formats", () => {
   test("bare leading number with dot, dash, or bare space", () => {
     expect(parseTitle("1 - The Sentence").number).toBe(1);
     expect(parseTitle("2.1 পদার্থের অবস্থা").number).toBe(2.1);
-    expect(parseTitle("11 .অবতার ও আদর্শ জীবনচরিত -অধ্যায় ১১-").number).toBe(11);
+    expect(parseTitle("11 .অবতার ও আদর্শ জীবনচরিত -অধ্যায় ১১-").number).toBe(
+      11,
+    );
   });
 
   test("Unit / Chapter / Lesson labels", () => {
@@ -74,7 +80,9 @@ describe("parseTitle — numbered formats", () => {
   });
 
   test("question-bank prefixes", () => {
-    expect(parseTitle("Questions No 1,2,3 (Seen Comprehension)").number).toBe(1);
+    expect(parseTitle("Questions No 1,2,3 (Seen Comprehension)").number).toBe(
+      1,
+    );
     expect(parseTitle("Question NO -7 Re-Arranging Sentences").number).toBe(7);
     expect(parseTitle("Question -10 Completing Story").number).toBe(10);
   });
@@ -93,21 +101,29 @@ describe("parseTitle — numbered formats", () => {
 
 describe("parseTitle — kinds & noise", () => {
   test("front matter", () => {
-    expect(parseTitle("সূচিপত্র Ssc 2028 & Marks Distribution").kind).toBe("front");
+    expect(parseTitle("সূচিপত্র Ssc 2028 & Marks Distribution").kind).toBe(
+      "front",
+    );
     expect(parseTitle("Table of Contents").kind).toBe("front");
   });
 
   test("back matter", () => {
-    expect(parseTitle("স্পেশাল মডেল টেস্ট ও উত্তরমালা -Pages-843-853-").kind).toBe("back");
+    expect(
+      parseTitle("স্পেশাল মডেল টেস্ট ও উত্তরমালা -Pages-843-853-").kind,
+    ).toBe("back");
     expect(parseTitle("ব্যবহারিক অংশ -Pages-323-346-").kind).toBe("back");
-    expect(parseTitle("বোর্ড পরীক্ষার প্রশ্নপত্র ও উত্তরমালা -Pages-854-880-").kind).toBe("back");
+    expect(
+      parseTitle("বোর্ড পরীক্ষার প্রশ্নপত্র ও উত্তরমালা -Pages-854-880-").kind,
+    ).toBe("back");
     expect(parseTitle("Board Questions").kind).toBe("back");
     expect(parseTitle("সাজেশন").kind).toBe("back");
   });
 
   test("(1) upload noise is stripped, real (2) survives", () => {
     expect(parseTitle("কৌতুক প্রসঙ্গে (1) (1)").display).toBe("কৌতুক প্রসঙ্গে");
-    expect(parseTitle("দয়া, অনুগ্রহ প্রসঙ্গে (2) (1)").display).toContain("(2)");
+    expect(parseTitle("দয়া, অনুগ্রহ প্রসঙ্গে (2) (1)").display).toContain(
+      "(2)",
+    );
   });
 
   test("a novel year is not a chapter number", () => {
@@ -142,7 +158,10 @@ describe("ordering", () => {
     const nums = [10, 2.2, 2.1, 1, 17, 16.4].map((n) => ({
       p: parseTitle(`MCQ - অধ্যায় - ${n}`),
     }));
-    const s = nums.map((x) => x.p).toSorted(compareChapters).map((p) => p.number);
+    const s = nums
+      .map((x) => x.p)
+      .toSorted(compareChapters)
+      .map((p) => p.number);
     expect(s).toEqual([1, 2.1, 2.2, 10, 16.4, 17]);
   });
 });

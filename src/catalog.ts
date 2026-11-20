@@ -98,7 +98,14 @@ function normalizeChapters(items: Chapter[]): Chapter[] {
     const pages: [number, number] | null = p.pageStart
       ? [p.pageStart, p.pageEnd ?? p.pageStart]
       : null;
-    return { ...ch, num: p.number, label: p.label, display: p.display, pages, kind: p.kind };
+    return {
+      ...ch,
+      num: p.number,
+      label: p.label,
+      display: p.display,
+      pages,
+      kind: p.kind,
+    };
   });
   return enriched
     .map((ch, i) => ({ ch, i, p: parseTitle(ch.title) }))

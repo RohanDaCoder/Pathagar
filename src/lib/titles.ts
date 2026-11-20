@@ -32,18 +32,53 @@ const ORD_SFX = "(?:ম|\\u09AF\\u09BC|\\u09DF|র্থ|ষ্ঠ|ষ্ট|শ
 
 /* Bengali ordinals that appear as chapter/poem/lesson order markers. */
 const ORD_WORDS_RAW: Record<string, number> = {
-  প্রথম: 1, দ্বিতীয়: 2, তৃতীয়: 3, চতুর্থ: 4, পঞ্চম: 5, ষষ্ঠ: 6,
-  সপ্তম: 7, অষ্টম: 8, নবম: 9, দশম: 10,
-  একাদশ: 11, দ্বাদশ: 12, ত্রয়োদশ: 13, চতুর্দশ: 14, পঞ্চদশ: 15,
-  ষোড়শ: 16, ষোলতম: 16, সপ্তদশ: 17, অষ্টাদশ: 18, ঊনিশতম: 19,
-  বিংশতম: 20, বিশতম: 20,
-  একবিংশতম: 21, একুশতম: 21, দ্বাবিংশতম: 22, ত্রয়োবিংশতম: 23,
-  চতুর্বিংশতম: 24, পঞ্চবিংশতম: 25, পঁচিশতম: 25, ছাব্বিশতম: 26,
-  সপ্তবিংশতম: 27, অষ্টাবিংশতম: 28, ঊনত্রিংশতম: 29, ত্রিংশতম: 30,
+  প্রথম: 1,
+  দ্বিতীয়: 2,
+  তৃতীয়: 3,
+  চতুর্থ: 4,
+  পঞ্চম: 5,
+  ষষ্ঠ: 6,
+  সপ্তম: 7,
+  অষ্টম: 8,
+  নবম: 9,
+  দশম: 10,
+  একাদশ: 11,
+  দ্বাদশ: 12,
+  ত্রয়োদশ: 13,
+  চতুর্দশ: 14,
+  পঞ্চদশ: 15,
+  ষোড়শ: 16,
+  ষোলতম: 16,
+  সপ্তদশ: 17,
+  অষ্টাদশ: 18,
+  ঊনিশতম: 19,
+  বিংশতম: 20,
+  বিশতম: 20,
+  একবিংশতম: 21,
+  একুশতম: 21,
+  দ্বাবিংশতম: 22,
+  ত্রয়োবিংশতম: 23,
+  চতুর্বিংশতম: 24,
+  পঞ্চবিংশতম: 25,
+  পঁচিশতম: 25,
+  ছাব্বিশতম: 26,
+  সপ্তবিংশতম: 27,
+  অষ্টাবিংশতম: 28,
+  ঊনত্রিংশতম: 29,
+  ত্রিংশতম: 30,
   ত্রিশতম: 30,
-  একত্রিশতম: 31, দ্বাত্রিংশতম: 32, তেত্রিশতম: 33, চৌঁত্রিশতম: 34,
-  পঁয়ত্রিশতম: 35, ছত্রিশতম: 36, সাঁইত্রিশতম: 37, আটত্রিশতম: 38,
-  ঊনচল্লিশতম: 39, চল্লিশতম: 40, পঞ্চাশতম: 50, ষাটতম: 60,
+  একত্রিশতম: 31,
+  দ্বাত্রিংশতম: 32,
+  তেত্রিশতম: 33,
+  চৌঁত্রিশতম: 34,
+  পঁয়ত্রিশতম: 35,
+  ছত্রিশতম: 36,
+  সাঁইত্রিশতম: 37,
+  আটত্রিশতম: 38,
+  ঊনচল্লিশতম: 39,
+  চল্লিশতম: 40,
+  পঞ্চাশতম: 50,
+  ষাটতম: 60,
 };
 /* keys normalized so lookups never depend on which য় form a literal uses */
 const ORD_WORDS: Record<string, number> = Object.fromEntries(
@@ -53,16 +88,39 @@ const ORD_WORDS: Record<string, number> = Object.fromEntries(
 /* Chapter-kind markers (front/back matter vs real chapters). Built through nz()
    so the য় form in a literal never matters. */
 const FRONT = [
-  /সূচিপত্র/, /তথ্যাবলি/, /সংক্ষেপিত/, /অ্যাব্রিভিয়েশন/, /শব্দাবলি/,
-  /^toc\b/i, /^contents?\b/i, /^table\s+of\s+contents\b/i, /^index\b/i,
-  /^preface\b/i, /^introduction\b/i,
+  /সূচিপত্র/,
+  /তথ্যাবলি/,
+  /সংক্ষেপিত/,
+  /অ্যাব্রিভিয়েশন/,
+  /শব্দাবলি/,
+  /^toc\b/i,
+  /^contents?\b/i,
+  /^table\s+of\s+contents\b/i,
+  /^index\b/i,
+  /^preface\b/i,
+  /^introduction\b/i,
 ].map((r) => new RegExp(nz(r.source), r.flags));
 const BACK = [
-  /মডেল\s*টেস্ট/, /ব্যবহারিক/, /বোর্ড/, /উত্তরমালা/, /সাজেশন/,
-  /পরিশিষ্ট/, /সংযোজন/, /এক\s*কথায়/, /টীকামূলক/, /রচনামূলক/,
-  /শ্রেণির\s*কাজ/, /বহুনির্বাচনি/, /অভীক্ষা/,
-  /\bmodel\s*(test|question)/i, /\bspecial\b/i, /\bboard\b/i,
-  /\bpractical\b/i, /\banswer/i, /\bappendix\b/i, /\bguide\s*exam\b/i,
+  /মডেল\s*টেস্ট/,
+  /ব্যবহারিক/,
+  /বোর্ড/,
+  /উত্তরমালা/,
+  /সাজেশন/,
+  /পরিশিষ্ট/,
+  /সংযোজন/,
+  /এক\s*কথায়/,
+  /টীকামূলক/,
+  /রচনামূলক/,
+  /শ্রেণির\s*কাজ/,
+  /বহুনির্বাচনি/,
+  /অভীক্ষা/,
+  /\bmodel\s*(test|question)/i,
+  /\bspecial\b/i,
+  /\bboard\b/i,
+  /\bpractical\b/i,
+  /\banswer/i,
+  /\bappendix\b/i,
+  /\bguide\s*exam\b/i,
 ].map((r) => new RegExp(nz(r.source), r.flags));
 
 export type ChapterKind = "front" | "chapter" | "back";
@@ -100,7 +158,13 @@ function findCandidates(t: string): Cand[] {
 
   // "… -অধ্যায় ৬- …" (suffix; the most reliable source)
   let m = t.match(new RegExp(String.raw`[-–]\s*${ADH}\s*[-–]?\s*${BN_NUM}`));
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: `${ADH} ${toBn(m[1])}`, w: 0 });
+  if (m)
+    push({
+      n: parseFloat(bnNum(m[1])),
+      strip: m[0],
+      label: `${ADH} ${toBn(m[1])}`,
+      w: 0,
+    });
 
   // "Unit-01 <name>" / "Lesson 5 …" / "Chapter 4 …" / "পাঠ ৩" / "অধ্যায় ২ …"
   // (not when an ordinal suffix follows the number — "পাঠ ৬ষ্ঠ" is w=5's job)
@@ -124,20 +188,35 @@ function findCandidates(t: string): Cand[] {
   // The separator is an alternation of two classes — a single class like [.、:)-–]
   // would form the range ")"…"–" and swallow every Bengali letter.
   m = t.match(new RegExp(`^${BN_NUM}(?:\\s*(?:[.、:]|[-–])\\s*|\\s+)(?=\\S)`));
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: toBn(m[1]), w: 2 });
+  if (m)
+    push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: toBn(m[1]), w: 2 });
 
   // "… Chapter - 1" / "… - অধ্যায় ১" (number at the very end)
   m = t.match(
-    new RegExp(String.raw`[-–]?\s*(?:chapter|${ADH})\s*[-–]\s*${BN_NUM}\s*$`, "i"),
+    new RegExp(
+      String.raw`[-–]?\s*(?:chapter|${ADH})\s*[-–]\s*${BN_NUM}\s*$`,
+      "i",
+    ),
   );
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: `${ADH} ${toBn(m[1])}`, w: 3 });
+  if (m)
+    push({
+      n: parseFloat(bnNum(m[1])),
+      strip: m[0],
+      label: `${ADH} ${toBn(m[1])}`,
+      w: 3,
+    });
 
   // "১ম অধ্যায় …" / "৪র্থ পাঠ …" / "৬ষ্ট পাঠ" (digit ordinal + label)
   m = t.match(
     new RegExp(String.raw`^([০-৯]+)${ORD_SFX}\s+(${ADH}|পাঠ|পরিচ্ছেদ)`),
   );
   if (m)
-    push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: `${m[2]} ${toBn(m[1])}`, w: 4 });
+    push({
+      n: parseFloat(bnNum(m[1])),
+      strip: m[0],
+      label: `${m[2]} ${toBn(m[1])}`,
+      w: 4,
+    });
 
   // "পাঠ ৬ষ্ঠ - ১০ম" (label, digit ordinal, optional range)
   m = t.match(
@@ -146,46 +225,83 @@ function findCandidates(t: string): Cand[] {
     ),
   );
   if (m)
-    push({ n: parseFloat(bnNum(m[2])), strip: m[0], label: `${m[1]} ${toBn(m[2])}`, w: 5 });
+    push({
+      n: parseFloat(bnNum(m[2])),
+      strip: m[0],
+      label: `${m[1]} ${toBn(m[2])}`,
+      w: 5,
+    });
 
   // bare digit ordinal "১ম …" (no label word after)
   m = t.match(new RegExp(`^([০-৯]+)${ORD_SFX}\\s+`));
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: toBn(m[1]), w: 6 });
+  if (m)
+    push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: toBn(m[1]), w: 6 });
 
   // "একাদশ - পঞ্চদশ" / "একত্রিশতম - পঁয়ত্রিশ" (word ordinals, may be a range)
   m = t.match(
-    new RegExp(
-      `^(${BENG}+)(?:\\s*[-–]\\s*(${BENG}+))?\\s*(?=$|[\\s(,.:;])`,
-    ),
+    new RegExp(`^(${BENG}+)(?:\\s*[-–]\\s*(${BENG}+))?\\s*(?=$|[\\s(,.:;])`),
   );
   if (m && ORD_WORDS[m[1]])
-    push({ n: ORD_WORDS[m[1]], strip: m[0], label: toBn(ORD_WORDS[m[1]]), w: 7 });
+    push({
+      n: ORD_WORDS[m[1]],
+      strip: m[0],
+      label: toBn(ORD_WORDS[m[1]]),
+      w: 7,
+    });
 
   // "MCQ - অধ্যায় - 2.1" (label noise, word, then number at the end)
   m = t.match(
     new RegExp(String.raw`^\S[^-]*?\s*[-–]\s*${ADH}\s*[-–]\s*${BN_NUM}\s*$`),
   );
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: `${ADH} ${toBn(m[1])}`, w: 8 });
+  if (m)
+    push({
+      n: parseFloat(bnNum(m[1])),
+      strip: m[0],
+      label: `${ADH} ${toBn(m[1])}`,
+      w: 8,
+    });
 
   // "গদ্য-১;" / "কবিতা-৩:" (Bengali prose/poem numbering: word-numeral;punct)
   m = t.match(/^(\S{1,14})-([০-৯0-9]+)\s*[;:：]/);
   if (m && !/^(?:19|20)\d{2}$/.test(bnNum(m[2])))
-    push({ n: parseFloat(bnNum(m[2])), strip: m[0], label: `${m[1]} ${toBn(m[2])}`, w: 9 });
+    push({
+      n: parseFloat(bnNum(m[2])),
+      strip: m[0],
+      label: `${m[1]} ${toBn(m[2])}`,
+      w: 9,
+    });
 
   // "Questions No 1,2,3 …" / "Question -10 …" / "Question NO -7 …" (exam banks)
   m = t.match(/^questions?\s*(?:no\.?|number)?\s*[-–:]?\s*(\d+)/i);
-  if (m) push({ n: parseFloat(m[1]), strip: m[0], label: `প্র ${toBn(m[1])}`, w: 10 });
+  if (m)
+    push({
+      n: parseFloat(m[1]),
+      strip: m[0],
+      label: `প্র ${toBn(m[1])}`,
+      w: 10,
+    });
 
   // "রুকু ১-৫" / "সুরা আল বাকারা,১ম - ৫ম পাঠ" (Quran sections, may be ranges).
   // Number only — the display keeps the full section name.
   m = t.match(
-    new RegExp(String.raw`^(রুকু|সুরা)[^\d০-৯]*?${BN_NUM}${ORD_SFX}?(?:\s*[-–]\s*[০-৯]+${ORD_SFX}?)*`),
+    new RegExp(
+      String.raw`^(রুকু|সুরা)[^\d০-৯]*?${BN_NUM}${ORD_SFX}?(?:\s*[-–]\s*[০-৯]+${ORD_SFX}?)*`,
+    ),
   );
-  if (m) push({ n: parseFloat(bnNum(m[2])), strip: "", label: `${m[1]} ${toBn(m[2])}`, w: 11 });
+  if (m)
+    push({
+      n: parseFloat(bnNum(m[2])),
+      strip: "",
+      label: `${m[1]} ${toBn(m[2])}`,
+      w: 11,
+    });
 
   // "রচনামূলক প্রশ্নের উত্তর (১-১০)" (range in parens — sort by first)
-  m = t.match(new RegExp(String.raw`\(${BN_NUM}\s*[-–]\s*[০-৯0-9]+\)\s*(?:\(1\)\s*)*$`));
-  if (m) push({ n: parseFloat(bnNum(m[1])), strip: "", label: toBn(m[1]), w: 12 });
+  m = t.match(
+    new RegExp(String.raw`\(${BN_NUM}\s*[-–]\s*[০-৯0-9]+\)\s*(?:\(1\)\s*)*$`),
+  );
+  if (m)
+    push({ n: parseFloat(bnNum(m[1])), strip: "", label: toBn(m[1]), w: 12 });
 
   return out.toSorted((a, b) => a.w - b.w);
 }
@@ -261,7 +377,10 @@ export function parseBookName(raw: string): ParsedBook {
     tags.push(mcq[1].toUpperCase());
     name = name.replace(mcq[0], "").trim();
   }
-  name = name.replace(/\s*গাইড\s*বই$/, "").replace(/\s+বই$/, "").trim();
+  name = name
+    .replace(/\s*গাইড\s*বই$/, "")
+    .replace(/\s+বই$/, "")
+    .trim();
   return { name: name || raw, tags };
 }
 
@@ -276,11 +395,14 @@ export function compareChapters(a: ParsedTitle, b: ParsedTitle): number {
   const wa = kindWeight(a);
   const wb = kindWeight(b);
   if (wa !== wb) return wa - wb;
-  if (wa === 0 && a.number !== b.number) return (a.number ?? 0) - (b.number ?? 0);
+  if (wa === 0 && a.number !== b.number)
+    return (a.number ?? 0) - (b.number ?? 0);
   return 0; // stable sort keeps API order within equal keys
 }
 
-export const sortParsed = <T extends { title?: string | null }>(items: T[]): T[] =>
+export const sortParsed = <T extends { title?: string | null }>(
+  items: T[],
+): T[] =>
   items
     .map((it, i) => ({ it, i, p: parseTitle(it.title) }))
     .toSorted((x, y) => compareChapters(x.p, y.p) || x.i - y.i)
