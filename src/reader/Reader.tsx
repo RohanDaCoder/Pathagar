@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ChevronLeft, ExternalLink, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ErrorDialog } from "@/components/ErrorDialog";
 import { toast } from "sonner";
 import { NATIVE } from "@/config";
 import { DB } from "@/db";
@@ -42,6 +43,7 @@ export function Reader() {
   const taskRef = useRef<RenderTask | null>(null);
 
   const [meta, setMeta] = useState<ChapterMeta | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -121,10 +123,7 @@ export function Reader() {
         stateRef.current = { pageNum: 1, scale: 0 };
         await renderPage(1);
       } catch (e) {
-        if (!cancelled) {
-          toast.error(`Could not open PDF: ${errMessage(e)}`);
-          void navigate(-1);
-        }
+        if (!cancelled) setOpenError(errMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -200,6 +199,20 @@ export function Reader() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <ErrorDialog
+        open={openError !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setOpenError(null);
+            void navigate(-1);
+          }
+        }}
+        title="Could not open this PDF"
+        message="The file may be damaged, or the app could not read it from storage. Try downloading the chapter again."
+        detail={openError ?? undefined}
+        actionLabel="Go back"
+        onAction={() => void navigate(-1)}
+      />
       <header className="flex items-center gap-1 border-b bg-background px-2 py-1.5">
         <Button
           size="icon"

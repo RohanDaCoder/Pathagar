@@ -17,6 +17,8 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import { InstallSuggestion } from "@/components/InstallSuggestion";
+import { ErrorDialog } from "@/components/ErrorDialog";
 import { Button } from "@/components/ui/button";
 import { Home } from "@/views/Home";
 import { Branch } from "@/views/Branch";
@@ -27,9 +29,9 @@ import { Reader } from "@/reader/Reader";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { error: Error | null }
+  { error: Error | null; showDialog: boolean }
 > {
-  state = { error: null as Error | null };
+  state = { error: null as Error | null, showDialog: false };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
@@ -42,15 +44,32 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-3 p-6 text-center">
-          <h1 className="text-lg font-bold">Something went wrong</h1>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {this.state.error.message || "An unexpected error occurred."}
-          </p>
-          <Button onClick={() => window.location.reload()}>
-            Reload the app
-          </Button>
-        </div>
+        <>
+          <div className="flex min-h-svh flex-col items-center justify-center gap-3 p-6 text-center">
+            <h1 className="text-lg font-bold">Something went wrong</h1>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {this.state.error.message || "An unexpected error occurred."}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Reload the app
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => this.setState({ showDialog: true })}
+            >
+              Show details
+            </Button>
+          </div>
+          <ErrorDialog
+            open={this.state.showDialog}
+            onOpenChange={(showDialog) => this.setState({ showDialog })}
+            title="Unexpected error"
+            message="The app hit an error it could not recover from. Reloading usually fixes it."
+            detail={this.state.error.stack || this.state.error.message}
+            actionLabel="Reload"
+            onAction={() => window.location.reload()}
+          />
+        </>
       );
     }
     return this.props.children;
@@ -161,6 +180,7 @@ export default function App() {
         <Shell />
       </HashRouter>
       <Toaster position="top-center" richColors />
+      <InstallSuggestion />
     </ErrorBoundary>
   );
 }
