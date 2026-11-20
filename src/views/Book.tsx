@@ -33,7 +33,7 @@ export function Book() {
   }>();
   useDlVersion(); // re-render on download-queue updates
 
-  const ref = catalog.findBook(bookId);
+  const ref = catalog().findBook(bookId);
   const bookName = ref?.book.name;
   const branchId = ref?.branchId;
   const branchLabel = ref?.branchLabel ?? "";
@@ -41,7 +41,7 @@ export function Book() {
 
   const fetchList = useCallback(async () => {
     const [chapters, metas] = await Promise.all([
-      catalog.getChapters(bookId),
+      catalog().getChapters(bookId),
       DB.allMeta(),
     ]);
     const mine = metas.filter((m) => m.bookId === bookId);

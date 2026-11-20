@@ -26,7 +26,7 @@ export function BookCard({
     <Card
       className="flex cursor-pointer flex-col items-center gap-1.5 p-4 text-center transition-colors hover:bg-muted/50"
       onClick={() => {
-        catalog.rememberBook({ ...bk, branchId });
+        catalog().rememberBook({ ...bk, branchId });
         /* subjects that ship as MCQ + CQ uploads open the version chooser */
         window.location.hash = twin
           ? `#/book/${bk.id}/pick`

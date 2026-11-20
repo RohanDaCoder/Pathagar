@@ -45,7 +45,8 @@ snapshot) and must run before every commit — CI has an `fmt --check` gate.
 │   ├── App.tsx             routes, bottom nav, error boundary
 │   ├── config.ts           porting constants (API/key/proxy) + settings
 │   ├── types.ts            domain types (Branch, Book, Chapter, DlState…)
-│   ├── catalog.ts          CatalogService → `catalog` (API → cache → snapshot)
+│   ├── catalog.ts          CatalogService → `catalog()` + `initCatalog()`
+│   │                       (API → cache → snapshot chunk)
 │   ├── net.ts              ApiClient → `api` + streamed PDF download w/ progress
 │   ├── db.ts               ChapterStore → `DB` (IndexedDB files + meta)
 │   ├── downloads/          DownloadQueue → `DL` (queue, concurrency, speed)
@@ -72,6 +73,14 @@ snapshot) and must run before every commit — CI has an `fmt --check` gate.
 
 - **Dependency direction:** React layer (`main → App → views/reader`) →
   services (`catalog`, `downloads`, `db`, `net`) → `lib` → `config`. No cycles.
+- **Code splitting:** every route view is a `React.lazy` chunk behind one
+  Suspense boundary in App.tsx; the ~250 KB catalog snapshot is its own lazy
+  chunk loaded by `initCatalog()` — `main.tsx` awaits it before the first
+  render (all views read `catalog()` synchronously, so it must be ready; the
+  bootstrap retries once, then shows a fatal screen). pdf.js was already lazy
+  (`pdfEngine.ensurePdfJs`). Keep heavy imports behind dynamic `import()`.
+  The service worker precaches every emitted chunk, so offline first-load
+  still works after the first visit.
 - **One source of truth** (the DRY rule, enforced structurally):
   - branch labels and which branches ship → `lib/branches.ts`
     (`make-snapshot.ts` reads it; the Home grid renders the snapshot)
