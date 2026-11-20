@@ -15,10 +15,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.pathagar.app"
+    namespace "me.rohandacoder.pathagar"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.pathagar.app"
+        applicationId "me.rohandacoder.pathagar"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode

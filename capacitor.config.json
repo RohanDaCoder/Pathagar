@@ -1,5 +1,5 @@
 {
-  "appId": "com.pathagar.app",
+  "appId": "me.rohandacoder.pathagar",
   "appName": "Pathagar",
   "webDir": "dist",
   "android": {
