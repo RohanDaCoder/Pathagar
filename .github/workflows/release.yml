@@ -53,6 +53,9 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon -PversionName="$VERSION_NAME" -PversionCode="$VERSION_CODE"
 
+      - name: Stage APK with release name
+        run: cp android/app/build/outputs/apk/release/app-release.apk "Pathagar-v${VERSION_NAME}.apk"
+
       - name: Package web bundle
         run: cd www && zip -rq "../pathagar-web-v${VERSION_NAME}.zip" .
 
@@ -63,5 +66,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "পাঠাগার (Pathagar) v${VERSION_NAME}" \
             --generate-notes \
-            "android/app/build/outputs/apk/release/app-release.apk#Pathagar-v${VERSION_NAME}.apk" \
+            "Pathagar-v${VERSION_NAME}.apk" \
             "pathagar-web-v${VERSION_NAME}.zip"
