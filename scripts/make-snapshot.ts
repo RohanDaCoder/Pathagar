@@ -3,7 +3,12 @@
    (src/lib/titles.ts) and writes the clean, ordered contract that ships in
    the app bundle. Run from the repo root:  bun scripts/make-snapshot.ts */
 
-import { compareChapters, parseTitle, parseBookName } from "../src/lib/titles";
+import {
+  compareChapters,
+  parseTitle,
+  parseBookName,
+  withMathNames,
+} from "../src/lib/titles";
 
 const API = "https://books.tetashweb.xyz/api/v1/app/";
 // The key ships in the original app; see AGENTS.md before changing endpoints.
@@ -100,7 +105,7 @@ for (const br of BRANCHES) {
     // eslint-disable-next-line no-await-in-loop -- chapters of one book load sequentially
     const raw = await chaptersOf(bk.id);
     const parsed = raw
-      .map((c) => ({ c, p: parseTitle(c.title) }))
+      .map((c) => ({ c, p: withMathNames(bk.name, parseTitle(c.title)) }))
       .toSorted((x, y) => compareChapters(x.p, y.p));
     const chapterList = parsed.map(({ c, p }) => ({
       id: c.id,

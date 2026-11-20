@@ -5,7 +5,7 @@ import "@/styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
-import { NATIVE, S } from "@/config";
+import { S } from "@/config";
 import { applyTheme } from "@/lib/theme";
 import { DL } from "@/dlqueue";
 import App from "@/App";
@@ -35,11 +35,7 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
-/* PWA service worker — web + http(s) only (Capacitor serves its own copy) */
-if (
-  "serviceWorker" in navigator &&
-  !NATIVE &&
-  location.protocol.startsWith("http")
-) {
+/* PWA service worker — http(s) only (file:// has no SW) */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   void registerSW({ immediate: true });
 }

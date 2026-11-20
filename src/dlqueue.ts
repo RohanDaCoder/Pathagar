@@ -23,9 +23,12 @@ interface DLApi {
   jobs: Map<string, DlJob>;
   onRowUpdate: ((chapterId: string) => void) | null;
   openChapter: ((chapterId: string) => void) | null;
+  /** fires on every user-initiated enqueue — the app opens the downloads popup */
+  onEnqueue: ((chapterId: string) => void) | null;
   persistAsked: boolean;
   enqueue(chapter: Chapter, book: Book, opts?: { autoOpen?: boolean }): void;
   cancel(id: string): void;
+  cancelAll(): void;
   retry(id: string): void;
   pump(): void;
   run(job: DlJob): Promise<void>;
@@ -90,6 +93,7 @@ export const DL: DLApi = {
   jobs: new Map(),
   onRowUpdate: null,
   openChapter: null,
+  onEnqueue: null,
   persistAsked: false,
 
   enqueue(chapter, book, { autoOpen = false } = {}) {
@@ -105,6 +109,7 @@ export const DL: DLApi = {
     this.pump();
     ensureTicker();
     this.onRowUpdate?.(id);
+    this.onEnqueue?.(id);
   },
 
   cancel(id) {
@@ -118,6 +123,13 @@ export const DL: DLApi = {
       st.cancelled = true;
     }
     this.onRowUpdate?.(id);
+  },
+
+  cancelAll() {
+    for (const [id, st] of S.dl) {
+      if (st.status === "downloading" || st.status === "queued")
+        this.cancel(id);
+    }
   },
 
   retry(id) {
@@ -192,7 +204,9 @@ export const DL: DLApi = {
         onProgress: (loaded, total) => {
           st.loaded = loaded;
           st.total = total;
-          st.pct = total ? Math.floor((loaded / total) * 100) : 0;
+          // cap at 99 until the file is stored — a total mismatch must never
+          // paint 100% while bytes are still arriving
+          st.pct = total ? Math.min(99, Math.floor((loaded / total) * 100)) : 0;
           st.speed = rollingSpeed(id, loaded);
           const now = performance.now();
           if (now - lastPaint > 120) {

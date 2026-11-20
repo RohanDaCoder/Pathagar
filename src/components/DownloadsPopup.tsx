@@ -98,6 +98,16 @@ export function DownloadsDialog({
                 {fmtSpeed(stats.speed)}
               </span>
             ) : null}
+            {stats.downloading + stats.queued > 0 ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                className={stats.speed ? "" : "ml-auto"}
+                onClick={() => DL.cancelAll()}
+              >
+                Cancel all
+              </Button>
+            ) : null}
           </DialogTitle>
           <DialogDescription className="sr-only">
             Active, queued and finished chapter downloads

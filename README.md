@@ -1,6 +1,6 @@
 # Pathagar
 
-**A lightweight cross-platform app for reading Class 9-10 guide books — Android and Web from a single TypeScript codebase.**
+**A lightweight PWA for reading Class 9-10 guide books — installable on phone and desktop, offline-first.**
 
 The original "Class 9 All Subject Books" (`com.nahidnafiz.classninebooks`) app was
 reverse-engineered with apkscope to understand its data pipeline; this client was
@@ -19,8 +19,8 @@ a fully offline library, and a tag-based release system.
 
 **bun** (1.4.6 line, pinned in CI) is the package manager, runtime, typechecker,
 formatter, linter and test runner; **vite 8** builds (and serves) the web app; **TypeScript 7** with
-`strict` across the board. Capacitor 8 wraps the same `dist/` build into the
-Android app.
+`strict` across the board. The same `dist/` build is the PWA: installable from
+the browser, offline via a service worker.
 
 | Task        | Command                                                                 |
 | ----------- | ----------------------------------------------------------------------- |
@@ -49,7 +49,7 @@ pathagar/
 │   ├── config.ts         ← platform detection, settings, global state (S)
 │   ├── types.ts          ← shared domain types
 │   ├── catalog.ts        ← API + localStorage cache + bundled snapshot (static import)
-│   ├── net.ts            ← fetch (web) / CapacitorHttp (native, 1 MiB ranged chunks)
+│   ├── net.ts            ← fetch + streaming progress (Range probe for total size)
 │   ├── db.ts             ← IndexedDB (files + meta stores)
 │   ├── dlqueue.ts        ← download manager (queue, concurrency, progress, cancel)
 │   ├── reader/Reader.tsx ← pdf.js viewer (pdfjs-dist@6, lazy chunk)
@@ -58,8 +58,7 @@ pathagar/
 │   └── lib/ + hooks/     ← errors, format, theme, storage; queue subscription
 ├── public/               ← icons, _redirects (copied verbatim to dist/)
 ├── scripts/serve.ts      ← Bun.serve: dist + /pdf proxy for local prod preview
-├── android/              ← Capacitor 8 project (webDir = dist)
-└── .github/workflows/    ← ci · release · netlify · pages (+ dependabot)
+└── .github/workflows/    ← ci (+ dependabot)
 ```
 
 **Dependency direction:** `main.ts → views → {catalog, dlqueue, reader, utils}
@@ -81,8 +80,9 @@ PDF download        GET  ────────►    /books?key=…&category=
 
 - **API host** has open CORS → the browser fetches data directly.
 - **PDF host** sends no CORS → on web, the same-origin `/pdf/*` reverse proxy
-  (Netlify `_redirects` in production, vite/`serve.ts` locally); on Android,
-  `CapacitorHttp` (native HTTP, 1 MiB range-chunks for accurate progress).
+  (Netlify `_redirects` in production, vite dev/`serve.ts` locally). Netlify's
+  edge serves the proxied PDFs brotli-compressed, so a 1-byte Range probe
+  learns the true (decompressed) total for real progress.
 - **Storage:** IndexedDB on both platforms (`pathagar` DB, `ptg:` localStorage prefix).
 - **Updater:** on launch, checks `releases/latest`, semver-compares, shows a
   banner on Home linking the APK. On web, the service worker hot-updates.
@@ -99,7 +99,7 @@ bun check && bun fmt --check && bun lint && bun test && bun run build  # the CI 
 git add -A && git commit -m "feat: …"
 git push -u origin feat/<name>
 gh pr create --fill
-# CI runs: bun check · fmt · lint · test · build + Android debug APK
+# CI runs: bun check · fmt · lint · test · build
 ```
 
 ## Release process (tag-based)
@@ -143,25 +143,9 @@ chapter downloads work in browsers. Manual alternative: `bun run build` and
 drag `dist/` to [app.netlify.com/drop](https://app.netlify.com/drop).
 The `NETLIFY_AUTH_TOKEN` / `NETLIFY_SITE_ID` repo secrets are kept for
 `netlify` CLI operations against the site.
-
-**GitHub Pages (demo mirror):** the `pages.yml` workflow publishes the app to
 `https://<user>.github.io/Pathagar/` (built with `VITE_BASE=/Pathagar/`).
 Pages cannot reverse-proxy `/pdf/*`, so chapter **downloads don't work there** —
 the app detects the host and shows a banner; browsing and offline reading work.
-
-## Android build (local)
-
-```bash
-bun install                 # first time (the android project needs @capacitor/android)
-bun run build && bun run cap:sync   # when src/ changes
-bun run build:apk           # debug APK → android/app/build/outputs/apk/debug/
-
-# Signed release (requires android/keystore.properties + release.jks)
-cd android && ./gradlew assembleRelease -PversionName=1.1.0 -PversionCode=10100
-```
-
-`android/keystore.properties` (gitignored) format:
-`storeFile=release.jks` · `storePassword=…` · `keyAlias=pathagar` · `keyPassword=…`
 
 ## Configuration and key rotation
 

@@ -1,21 +1,13 @@
-/* views/Home.tsx — branch cards, library shortcut, update banner */
+/* views/Home.tsx — branch cards, library shortcut, footer */
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import {
-  BookOpen,
-  ChevronRight,
-  Library,
-  RefreshCw,
-  WifiOff,
-} from "lucide-react";
+import { BookOpen, ChevronRight, Library } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { APP_NAME, APP_VERSION } from "@/config";
 import { loadSnapshot } from "@/catalog";
 import { DB } from "@/db";
-import { checkForUpdate, skipVersion, type UpdateInfo } from "@/updater";
 import { fmtMB } from "@/lib/format";
 
 export function Home() {
@@ -24,11 +16,9 @@ export function Home() {
   const [meta, setMeta] = useState<Awaited<
     ReturnType<typeof DB.allMeta>
   > | null>(null);
-  const [upd, setUpd] = useState<UpdateInfo | null>(null);
 
   useEffect(() => {
     void DB.allMeta().then(setMeta);
-    void checkForUpdate().then(setUpd);
   }, []);
 
   const totalMB = (meta ?? []).reduce((a, m) => a + (m.size || 0), 0);
@@ -37,10 +27,6 @@ export function Home() {
     if (m.branchId)
       savedByBranch.set(m.branchId, (savedByBranch.get(m.branchId) || 0) + 1);
   }
-  const onPagesMirror =
-    typeof location !== "undefined" &&
-    (location.hostname.endsWith(".github.io") ||
-      location.hostname.endsWith(".is-a.dev"));
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 pb-24 pt-6">
@@ -55,53 +41,6 @@ export function Home() {
           </p>
         </div>
       </header>
-
-      {upd && !upd.skipped ? (
-        <Card className="flex items-center gap-3 p-3">
-          <RefreshCw
-            className="size-5 shrink-0 text-primary"
-            aria-hidden="true"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">
-              New version v{upd.latest} is available
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Current: v{upd.current} — download and install the update.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => window.open(upd.apkUrl, "_blank", "noopener")}
-          >
-            Download
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              skipVersion(upd.latest);
-              setUpd(null);
-            }}
-          >
-            Later
-          </Button>
-        </Card>
-      ) : null}
-
-      {onPagesMirror ? (
-        <Card className="flex items-start gap-3 border-destructive/40 bg-destructive/5 p-3">
-          <WifiOff
-            className="mt-0.5 size-5 shrink-0 text-destructive"
-            aria-hidden="true"
-          />
-          <p className="text-sm">
-            Demo build — PDF downloads need the Netlify deployment or the
-            Android app (this mirror has no PDF proxy). Browsing and offline
-            reading work.
-          </p>
-        </Card>
-      ) : null}
 
       {meta && meta.length > 0 ? (
         <Link to="/library" className="block">

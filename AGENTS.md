@@ -5,8 +5,7 @@ Guidance for AI coding agents (and humans) working in this repository.
 ## What this is
 
 Pathagar is a lightweight client for reading Class 9-10 (SSC) guide books —
-one TypeScript codebase that ships as an installable PWA (web) and an Android
-app (Capacitor wraps the same vite build). The catalog and PDFs come from the
+one TypeScript codebase that ships as an installable PWA. The catalog and PDFs come from the
 original "Class 9 All Subject Books" app's server (reverse-engineered);
 this repo contains code and config only — never PDFs or other copyrighted
 content, and the project is for students' personal study.
@@ -27,7 +26,6 @@ content, and the project is for students' personal study.
 | Dev server                | vite 8 (proxies `/pdf/*` to the PDF host) | `bun run dev` → http://127.0.0.1:5173   |
 | Build                     | vite 8 → `dist/`                          | `bun run build`                         |
 | Serve the build           | Bun static server + PDF proxy             | `bun run serve` → http://127.0.0.1:4173 |
-| Android sync/build        | Capacitor 8                               | `bun run cap:sync`, `bun run build:apk` |
 
 `typescript@7` is a devDependency for editor tooling (tsserver) and a
 cross-check (`bunx tsc --noEmit`); CI uses `bun check` because it is faster.

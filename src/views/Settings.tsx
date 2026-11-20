@@ -1,8 +1,8 @@
 /* views/Settings.tsx — appearance, install, data, about.
    Technical settings are gone from the UI on purpose: the API URL, API key
    and PDF proxy prefix are porting constants in src/config.ts (the file we
-   re-point when moving the backend). Update checks are Android-only — the
-   web app is always the latest version the moment it is deployed. */
+   re-point when moving the backend). PWA-only app: it is always the latest
+   version the moment it is deployed. */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -13,19 +13,14 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
-import { Badge } from "@/components/ui/badge";
-import { NATIVE, APP_NAME, APP_VERSION, REPO, S, saveSettings } from "@/config";
+import { APP_NAME, APP_VERSION, S, saveSettings } from "@/config";
 import { applyTheme } from "@/lib/theme";
 import { DB } from "@/db";
-import { checkForUpdate } from "@/updater";
 import { storageEstimate } from "@/lib/storage";
 import { fmtMB } from "@/lib/format";
 
-type UpdState = "idle" | "checking" | "latest" | "available";
-
 export function Settings() {
   const st = S.settings;
-  const [updState, setUpdState] = useState<UpdState>("idle");
   const [est, setEst] =
     useState<Awaited<ReturnType<typeof storageEstimate>>>(null);
   const { canInstall, install } = useInstallPrompt();
@@ -98,45 +93,6 @@ export function Settings() {
         </fieldset>
       ) : null}
 
-      {NATIVE ? (
-        <fieldset className="mt-4 grid gap-3">
-          <legend className="mb-1 text-sm font-semibold">App update</legend>
-          <Card className="flex items-center gap-3 p-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">
-                {APP_NAME} v{APP_VERSION}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                When a new version is out, a banner appears on Home (from GitHub
-                Releases).
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={updState === "checking"}
-              onClick={() => {
-                setUpdState("checking");
-                void (async () => {
-                  const u = await checkForUpdate();
-                  if (u) {
-                    setUpdState("available");
-                    window.open(u.apkUrl, "_blank", "noopener");
-                  } else {
-                    setUpdState("latest");
-                  }
-                })();
-              }}
-            >
-              {updState === "checking" ? "Checking…" : "Check for update"}
-            </Button>
-            {updState === "latest" ? (
-              <Badge variant="secondary">Up to date</Badge>
-            ) : null}
-          </Card>
-        </fieldset>
-      ) : null}
-
       <fieldset className="mt-4 grid gap-3">
         <legend className="mb-1 text-sm font-semibold">Data</legend>
         <Card className="grid gap-3 p-4 text-sm">
@@ -168,11 +124,13 @@ export function Settings() {
         <legend className="mb-1 text-sm font-semibold">About</legend>
         <Card className="p-4 text-sm leading-relaxed text-muted-foreground">
           <p className="font-medium text-foreground">
-            {APP_NAME} v{APP_VERSION} · <code>{REPO}</code>
+            {APP_NAME} v{APP_VERSION}
           </p>
           <p className="mt-2">
-            A lightweight client for reading Class 9-10 guide books — Android
-            and web from one codebase.
+            A lightweight PWA for reading Class 9-10 guide books — install it on
+            your phone or desktop (see "Install app" above) and it works offline
+            like a native app. The web app is always the latest version —
+            nothing to update manually.
           </p>
           <p className="mt-2">
             The catalog and PDFs come from the original “Class 9 All Subject

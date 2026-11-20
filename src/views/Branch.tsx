@@ -9,7 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { S } from "@/config";
 import { loadSnapshot, getBooks } from "@/catalog";
-import { parseBookName } from "@/lib/titles";
+import {
+  parseBookName,
+  streamOf,
+  STREAM_LABEL,
+  type Stream,
+} from "@/lib/titles";
 import { DB } from "@/db";
 import { errMessage } from "@/lib/errors";
 import type { Book, ListResult } from "@/types";
@@ -78,80 +83,121 @@ export function Branch() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {data.stale ? (
-            <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm sm:col-span-2 lg:col-span-3">
+            <Card className="flex items-center gap-2 border-amber-500/40 bg-amber-500/10 p-3 text-sm">
               <WifiOff className="size-4 shrink-0" aria-hidden="true" />
               Offline — showing the saved list
             </Card>
           ) : null}
           {data.items.length === 0 ? (
-            <p className="py-10 text-center text-muted-foreground sm:col-span-2 lg:col-span-3">
+            <p className="py-10 text-center text-muted-foreground">
               No books in this branch.
             </p>
           ) : (
-            data.items.map((bk) => {
-              const bp = parseBookName(bk.name);
-              return (
-                <Card
-                  key={bk.id}
-                  className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-muted/50"
-                  onClick={() => {
-                    S.bookCtx.set(String(bk.id), {
-                      id: String(bk.id),
-                      name: bk.name,
-                      branchId: id,
-                    });
-                    window.location.hash = `#/book/${bk.id}`;
-                  }}
-                >
-                  {bk.image ? (
-                    <img
-                      src={bk.image}
-                      alt=""
-                      loading="lazy"
-                      className="size-14 shrink-0 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xl font-semibold text-primary">
-                      {(bp.name || "B").trim().charAt(0)}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 font-semibold">{bp.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {meta?.books.find((x) => x.id === bk.id)?.chapters ?? "…"}{" "}
-                      chapters
-                    </p>
-                    {bp.tags.length ? (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {bp.tags.map((tg) => (
-                          <Badge key={tg} variant="secondary">
-                            {tg}
-                          </Badge>
-                        ))}
-                        {savedByBook[String(bk.id)] ? (
-                          <Badge variant="outline">
-                            ✓ {savedByBook[String(bk.id)]} saved
-                          </Badge>
-                        ) : null}
-                      </div>
-                    ) : savedByBook[String(bk.id)] ? (
-                      <Badge variant="secondary" className="mt-1">
-                        ✓ {savedByBook[String(bk.id)]} saved
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <ChevronRight
-                    className="size-5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </Card>
-              );
-            })
+            renderGrouped()
           )}
         </div>
       )}
     </div>
   );
+
+  function bookCard(bk: Book): React.JSX.Element {
+    const bp = parseBookName(bk.name);
+    return (
+      <Card
+        key={bk.id}
+        className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-muted/50"
+        onClick={() => {
+          S.bookCtx.set(String(bk.id), {
+            id: String(bk.id),
+            name: bk.name,
+            branchId: id,
+          });
+          window.location.hash = `#/book/${bk.id}`;
+        }}
+      >
+        {bk.image ? (
+          <img
+            src={bk.image}
+            alt=""
+            loading="lazy"
+            className="size-14 shrink-0 rounded-lg object-cover"
+          />
+        ) : (
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xl font-semibold text-primary">
+            {(bp.name || "B").trim().charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 font-semibold">{bp.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {meta?.books.find((x) => x.id === bk.id)?.chapters ?? "…"} chapters
+          </p>
+          {bp.tags.length ? (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {bp.tags.map((tg) => (
+                <Badge key={tg} variant="secondary">
+                  {tg}
+                </Badge>
+              ))}
+              {savedByBook[String(bk.id)] ? (
+                <Badge variant="outline">
+                  ✓ {savedByBook[String(bk.id)]} saved
+                </Badge>
+              ) : null}
+            </div>
+          ) : savedByBook[String(bk.id)] ? (
+            <Badge variant="secondary" className="mt-1">
+              ✓ {savedByBook[String(bk.id)]} saved
+            </Badge>
+          ) : null}
+        </div>
+        <ChevronRight
+          className="size-5 shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+      </Card>
+    );
+  }
+
+  function renderGrouped() {
+    const byStream = new Map<Stream, Book[]>();
+    for (const g of [
+      "compulsory",
+      "science",
+      "business",
+      "humanities",
+    ] as Stream[])
+      byStream.set(
+        g,
+        data!.items.filter((bk) => streamOf(bk.name) === g),
+      );
+    const present = [...byStream.entries()].filter(([, v]) => v.length > 0);
+    const single = present.length === 1; // don't label a one-group branch
+
+    const only = single ? present[0] : undefined;
+    if (only) {
+      const [, books] = only;
+      return (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {books.map(bookCard)}
+        </div>
+      );
+    }
+    return (
+      <div className="grid gap-5">
+        {present.map(([g, books]) => (
+          <section key={g}>
+            <h2 className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {STREAM_LABEL[g]}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {books.map(bookCard)}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
 }

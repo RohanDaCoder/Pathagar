@@ -21,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ErrorDialog } from "@/components/ErrorDialog";
 import { toast } from "sonner";
-import { NATIVE } from "@/config";
 import { DB } from "@/db";
 import { errMessage } from "@/lib/errors";
 import type { ChapterMeta } from "@/types";
@@ -380,16 +379,14 @@ export function Reader() {
         >
           <Maximize2 className="size-4" aria-hidden="true" />
         </Button>
-        {!NATIVE ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Open in new tab"
-            onClick={() => void openInTab()}
-          >
-            <ExternalLink className="size-4" aria-hidden="true" />
-          </Button>
-        ) : null}
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Open in new tab"
+          onClick={() => void openInTab()}
+        >
+          <ExternalLink className="size-4" aria-hidden="true" />
+        </Button>
       </header>
 
       <div

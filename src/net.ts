@@ -1,10 +1,13 @@
-/* net.ts — network adapter
+/* net.ts — network adapter (PWA-only)
    API host  : CORS open (Access-Control-Allow-Origin: *) -> fetch directly
-   PDF host  : NO CORS headers ->
-     - web    : fetch via same-origin reverse proxy (Netlify /pdf/* -> pdf.tetashweb.xyz/*)
-     - native : CapacitorHttp (native Java http, no CORS), 1 MiB ranged chunks for progress */
-import { CapacitorHttp } from "@capacitor/core";
-import { API_KEY, API_URL, NATIVE, PDF_PROXY_PREFIX } from "./config";
+   PDF host  : NO CORS headers -> fetch via same-origin reverse proxy
+               (Netlify /pdf/* -> pdf.tetashweb.xyz/*)
+   Progress  : Netlify's edge serves the proxied PDFs brotli-compressed, so
+   content-length is the COMPRESSED size while the stream reader counts
+   DECOMPRESSED bytes — got/total blew past 100% instantly (the "progress bar
+   jumps 0->100" bug). A 1-byte Range probe (not compressed, verified) gives
+   the true total, so progress is real even through the compressed proxy. */
+import { API_KEY, API_URL, PDF_PROXY_PREFIX } from "./config";
 
 export class ApiError extends Error {
   status: number;
@@ -15,7 +18,6 @@ export class ApiError extends Error {
 }
 
 export function pdfFetchUrl(url: string): string {
-  if (NATIVE) return url; // native HTTP has no CORS — talk to the host directly
   const p = PDF_PROXY_PREFIX.endsWith("/")
     ? PDF_PROXY_PREFIX
     : `${PDF_PROXY_PREFIX}/`;
@@ -31,32 +33,10 @@ export async function apiGet<T>(
   url.searchParams.set("key", API_KEY);
   for (const [k, v] of Object.entries(params))
     url.searchParams.set(k, String(v));
-  if (NATIVE) {
-    const r = await CapacitorHttp.get({
-      url: url.toString(),
-      responseType: "json",
-    });
-    if (r.status >= 400) throw new ApiError(r.status);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- API boundary: the caller owns the shape
-    return r.data as T;
-  }
   const r = await fetch(url.toString());
   if (!r.ok) throw new ApiError(r.status);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- API boundary: the caller owns the shape
   return (await r.json()) as T;
-}
-
-function b64ToU8(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
-
-function toU8(data: unknown): Uint8Array | null {
-  if (data instanceof Uint8Array) return data;
-  if (data instanceof ArrayBuffer) return new Uint8Array(data);
-  return typeof data === "string" ? b64ToU8(data) : null;
 }
 
 function concatU8(parts: Uint8Array[], total: number): Uint8Array {
@@ -74,71 +54,38 @@ export interface DownloadOpts {
   signal?: AbortSignal;
 }
 
-/* native: 1 MiB ranged chunks through CapacitorHttp -> real progress */
-async function nativeDownload(
-  url: string,
-  onProgress: DownloadOpts["onProgress"],
-  isCancelled: () => boolean | undefined,
-): Promise<Uint8Array> {
-  const CHUNK = 1 << 20;
-  let total = 0;
-  /* GET 1 byte (not HEAD — HEAD ignores Range) to learn the total size */
-  const probe = await CapacitorHttp.request({
-    method: "GET",
-    url,
-    headers: { Range: "bytes=0-0" },
-    responseType: "arraybuffer",
-  }).catch(() => null);
-  const hdrs = (probe?.headers ?? {}) as Record<string, string>;
-  const crHeader =
-    hdrs["content-range"] || hdrs["Content-Range"] || hdrs["CONTENT-RANGE"];
-  const m = crHeader?.match(/\/(\d+)\s*$/);
-  if (m) total = Number.parseInt(m[1], 10);
-
-  const parts: Uint8Array[] = [];
-  let got = 0;
-  if (total > 0) {
-    for (let start = 0; start < total; start += CHUNK) {
-      if (isCancelled()) throw new DOMException("aborted", "AbortError");
-      const end = Math.min(start + CHUNK, total) - 1;
-      // eslint-disable-next-line no-await-in-loop -- ranged chunks must arrive in order
-      const r = await CapacitorHttp.request({
-        method: "GET",
-        url,
-        headers: { Range: `bytes=${start}-${end}` },
-        responseType: "arraybuffer",
-      });
-      if (r.status >= 400) throw new ApiError(r.status);
-      const u8 = toU8(r.data);
-      if (!u8) throw new Error("Unexpected data format");
-      parts.push(u8);
-      got += u8.byteLength;
-      onProgress?.(got, total);
-    }
-    return concatU8(parts, got);
+/* one-byte ranged GET to learn the true (decompressed) total size */
+async function probeTotal(url: string, signal?: AbortSignal): Promise<number> {
+  try {
+    const r = await fetch(url, { headers: { Range: "bytes=0-0" }, signal });
+    const cr = r.headers.get("content-range");
+    const m = cr?.match(/\/(\d+)\s*$/);
+    return m ? Number.parseInt(m[1], 10) : 0;
+  } catch {
+    return 0;
   }
-  /* no range support -> single request, no granular progress */
-  const r = await CapacitorHttp.request({
-    method: "GET",
-    url,
-    responseType: "arraybuffer",
-  });
-  if (r.status >= 400) throw new ApiError(r.status);
-  const u8 = toU8(r.data);
-  if (!u8) throw new Error("Unexpected data format");
-  onProgress?.(u8.byteLength, u8.byteLength);
-  return u8;
 }
 
-/* web: streaming fetch with progress; falls back to arrayBuffer */
 async function webDownload(
   url: string,
   onProgress: DownloadOpts["onProgress"],
   signal?: AbortSignal,
 ): Promise<Uint8Array> {
+  /* the probe and the body fetch run concurrently: the probe only needs to
+     win the race before the first progress paint matters (it normally does —
+     the full body takes far longer than 1 byte) */
+  const totalPromise = probeTotal(url, signal);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new ApiError(res.status);
-  const total = Number.parseInt(res.headers.get("content-length") || "0", 10);
+  const hdrTotal = Number.parseInt(
+    res.headers.get("content-length") || "0",
+    10,
+  );
+  const encoded = Boolean(res.headers.get("content-encoding"));
+  /* if the transfer is compressed, content-length is the compressed size and
+     must not be used for progress — wait for the probe instead */
+  let total = encoded ? 0 : hdrTotal;
+
   if (!res.body?.getReader) {
     const buf = await res.arrayBuffer();
     onProgress?.(buf.byteLength, buf.byteLength);
@@ -153,7 +100,11 @@ async function webDownload(
     if (done) break;
     parts.push(value);
     got += value.byteLength;
-    onProgress?.(got, total || got);
+    if (!total) {
+      // eslint-disable-next-line no-await-in-loop -- one-time size probe lands before the first paint matters
+      total = await totalPromise;
+    }
+    onProgress?.(got, total);
   }
   return concatU8(parts, got);
 }
@@ -162,8 +113,5 @@ export function downloadPdf(
   url: string,
   { onProgress, signal }: DownloadOpts = {},
 ): Promise<Uint8Array> {
-  const isCancelled = () => signal?.aborted;
-  return NATIVE
-    ? nativeDownload(url, onProgress, isCancelled)
-    : webDownload(url, onProgress, signal);
+  return webDownload(url, onProgress, signal);
 }
