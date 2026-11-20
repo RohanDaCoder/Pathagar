@@ -32,10 +32,15 @@ export async function renderHome() {
   }
   const upd = await checkForUpdate();
 
-  /* GitHub Pages mirrors the app but has no /pdf reverse proxy — downloads
-     need the Netlify deployment or the Android APK. Say so instead of failing silently. */
-  const pagesDemo = location.hostname.endsWith(".github.io")
-    ? `<div class="banner warn">${svgOffline} Demo build — PDF downloads need the Netlify deployment or the Android app (GitHub Pages has no PDF proxy). Browsing and offline reading work.</div>`
+  /* The GitHub Pages mirror has no /pdf reverse proxy — downloads need the
+     Netlify deployment or the Android APK. Say so instead of failing silently.
+     (The Pages site redirects to the owner's is-a.dev custom domain, so match
+     that host too; detection is web-only — NATIVE builds never show this.) */
+  const onPagesMirror =
+    location.hostname.endsWith(".github.io") ||
+    location.hostname.endsWith(".is-a.dev");
+  const pagesDemo = onPagesMirror
+    ? `<div class="banner warn">${svgOffline} Demo build — PDF downloads need the Netlify deployment or the Android app (this mirror has no PDF proxy). Browsing and offline reading work.</div>`
     : "";
 
   const banner =
