@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { catalog } from "@/catalog";
 import { DB } from "@/db";
+import { STREAM_STYLE } from "@/lib/streamStyle";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import {
   isMcqBook,
@@ -102,30 +103,44 @@ export function Branch() {
                   bk={bk}
                   branchId={id}
                   books={items}
+                  stream={groups[0].stream}
                   savedCount={data.saved[String(bk.id)] ?? 0}
                 />
               ))}
             </div>
           ) : (
             <div className="grid gap-5">
-              {groups.map(({ stream, books }) => (
-                <section key={stream}>
-                  <h2 className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {STREAM_LABEL[stream]}
-                  </h2>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {books.map((bk) => (
-                      <BookCard
-                        key={bk.id}
-                        bk={bk}
-                        branchId={id}
-                        books={items}
-                        savedCount={data.saved[String(bk.id)] ?? 0}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
+              {groups.map(({ stream, books }) => {
+                const st = STREAM_STYLE[stream];
+                return (
+                  <section key={stream}>
+                    <div className="mb-2 flex items-center gap-2 px-1">
+                      <span
+                        className={`flex size-7 items-center justify-center rounded-lg ${st.chip}`}
+                      >
+                        <st.icon className="size-4" aria-hidden="true" />
+                      </span>
+                      <h2
+                        className={`text-sm font-semibold uppercase tracking-wide ${st.label}`}
+                      >
+                        {STREAM_LABEL[stream]}
+                      </h2>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {books.map((bk) => (
+                        <BookCard
+                          key={bk.id}
+                          bk={bk}
+                          branchId={id}
+                          books={items}
+                          stream={stream}
+                          savedCount={data.saved[String(bk.id)] ?? 0}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>

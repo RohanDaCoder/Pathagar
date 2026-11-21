@@ -57,7 +57,7 @@ export default defineConfig({
     tailwindcss(),
     pathagarHtml(base),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt", // updates wait: popup + auto-apply (see main.tsx), never silent
       injectRegister: null, // registered manually in src/main.ts (skipped inside Capacitor)
       includeAssets: ["icons/favicon.png", "icons/apple-touch-icon.png"],
       manifest: {

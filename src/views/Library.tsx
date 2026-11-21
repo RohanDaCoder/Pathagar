@@ -54,13 +54,20 @@ export function Library() {
           <ChevronLeft className="size-4" aria-hidden="true" /> Home
         </Link>
       </nav>
-      <h1 className="text-xl font-bold">My Library</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {(metas ?? []).length} chapters · {fmtMB(totalMB)}
-      </p>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+          <FileText className="size-5" aria-hidden="true" />
+        </span>
+        <div>
+          <h1 className="text-xl font-bold">My Library</h1>
+          <p className="text-sm text-muted-foreground">
+            {(metas ?? []).length} chapters · {fmtMB(totalMB)}
+          </p>
+        </div>
+      </div>
 
       {est ? (
-        <Card className="mb-4 p-4 text-sm">
+        <Card className="mb-4 border-primary/30 bg-primary/5 p-4 text-sm">
           <p className="font-medium">
             Storage — {fmtMB(est.usage)} / {fmtMB(est.quota)}
           </p>
