@@ -113,7 +113,13 @@ function findCandidates(t: string): Cand[] {
   // would form the range ")"…"–" and swallow every Bengali letter.
   m = t.match(new RegExp(`^${BN_NUM}(?:\\s*(?:[.、:]|[-–])\\s*|\\s+)(?=\\S)`));
   if (m)
-    push({ n: parseFloat(bnNum(m[1])), strip: m[0], label: toBn(m[1]), w: 2 });
+    push({
+      n: parseFloat(bnNum(m[1])),
+      strip: m[0],
+      // English titles keep ASCII digits; Bengali titles get Bangla numerals
+      label: /[\u0980-\u09FD]/.test(t) ? toBn(m[1]) : m[1],
+      w: 2,
+    });
 
   // "… Chapter - 1" / "… - অধ্যায় ১" (number at the very end)
   m = t.match(
