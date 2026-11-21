@@ -4,6 +4,27 @@ import type { ChapterMeta } from "./types";
 
 type TxResult<T> = IDBRequest<T> | undefined;
 
+/** Tell the UI the file set changed — the Last Read tab re-checks whether
+    its chapter is still downloaded, and the DL queue drops 'done' states
+    for deleted files (book rows would otherwise navigate straight to a
+    reader for a file that no longer exists). No-op under `bun test`. */
+export type DbChange = { kind: "put" | "del" | "clear"; id?: string };
+
+function notifyDbChange(detail: DbChange) {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent<DbChange>("ptg:db", { detail }));
+}
+
+/** Subscribe to file-set changes; returns an unsubscribe function. */
+export function onDbChange(fn: (d: DbChange) => void): () => void {
+  const h = (e: Event) =>
+    // every ptg:db event comes from notifyDbChange, so detail is a DbChange
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    fn((e as CustomEvent<DbChange>).detail);
+  window.addEventListener("ptg:db", h);
+  return () => window.removeEventListener("ptg:db", h);
+}
+
 export class ChapterStore {
   private dbp: Promise<IDBDatabase> | undefined;
 
@@ -50,6 +71,7 @@ export class ChapterStore {
       );
       t.objectStore("meta").put(meta, id);
     });
+    notifyDbChange({ kind: "put", id });
   }
 
   getFile(id: string) {
@@ -80,6 +102,7 @@ export class ChapterStore {
       t.objectStore("files").delete(id);
       t.objectStore("meta").delete(id);
     });
+    notifyDbChange({ kind: "del", id });
   }
 
   async clearAll() {
@@ -87,6 +110,7 @@ export class ChapterStore {
       t.objectStore("files").clear();
       t.objectStore("meta").clear();
     });
+    notifyDbChange({ kind: "clear" });
   }
 
   async updateMeta(id: string, patch: Partial<ChapterMeta>) {

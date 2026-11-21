@@ -6,7 +6,7 @@
 import { DL_CONCURRENCY } from "@/config";
 import { errMessage, errStatus } from "@/lib/errors";
 import { downloadPdf, pdfFetchUrl } from "@/net";
-import { DB } from "@/db";
+import { DB, onDbChange } from "@/db";
 import type { Book, Chapter, DlState } from "@/types";
 
 export interface DlJob {
@@ -33,6 +33,25 @@ export class DownloadQueue {
   #version = 0;
   #ticker: ReturnType<typeof setInterval> | null = null;
   #persistAsked = false;
+
+  constructor() {
+    /* deletions elsewhere (Library delete-all / single delete, Settings)
+       must drop our terminal states — a stale 'done' makes book rows
+       navigate straight to a reader for a file that no longer exists */
+    if (typeof window !== "undefined")
+      onDbChange((d) => {
+        if (d.kind === "del" && d.id) {
+          const st = this.#states.get(d.id);
+          if (st && st.status !== "downloading" && st.status !== "queued")
+            this.#states.delete(d.id);
+        } else if (d.kind === "clear") {
+          for (const [id, st] of this.#states)
+            if (st.status !== "downloading" && st.status !== "queued")
+              this.#states.delete(id);
+        } else return; // 'put' — nothing to retire
+        this.#emit();
+      });
+  }
 
   get version(): number {
     return this.#version;

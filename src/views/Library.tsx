@@ -157,10 +157,10 @@ export function Library() {
           ))}
           <div className="flex justify-center pt-2">
             <Button
-              variant="ghost"
-              className="text-destructive"
+              className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => setConfirmClear(true)}
             >
+              <Trash2 className="size-4" aria-hidden="true" />
               Delete all downloads
             </Button>
           </div>

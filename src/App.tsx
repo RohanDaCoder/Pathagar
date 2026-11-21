@@ -5,6 +5,7 @@ import {
   Suspense,
   lazy,
   useEffect,
+  useState,
   type ErrorInfo,
   type ReactNode,
 } from "react";
@@ -32,6 +33,7 @@ import {
   useDownloadsOpen,
 } from "@/components/DownloadsPopup";
 import { Button } from "@/components/ui/button";
+import { DB, onDbChange } from "@/db";
 import { DL } from "@/downloads";
 
 /* route-level code splitting: every view is its own chunk, fetched on first
@@ -137,10 +139,37 @@ function RouteFallback() {
   );
 }
 
+/* The Last Read tab only makes sense while that chapter's PDF is still on
+   disk. The pointer (ptg:lastRead) outlives its file — delete-all or a
+   single delete would leave a dead button — so re-check after every
+   navigation and after any DB mutation (re-downloading the same chapter
+   brings the tab back). */
+function useLastReadTab(pathname: string) {
+  const [has, setHas] = useState(false);
+  useEffect(() => {
+    /* the nav is hidden in the reader — nothing to update there; the
+       effect re-runs (and re-checks) on the next page's pathname */
+    if (pathname.startsWith("/read")) return () => {};
+    let alive = true;
+    const check = async () => {
+      const id = localStorage.getItem("ptg:lastRead");
+      const file = id ? await DB.getFile(id).catch(() => undefined) : undefined;
+      if (alive) setHas(Boolean(file));
+    };
+    void check();
+    const unsub = onDbChange(() => void check());
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, [pathname]);
+  return has;
+}
+
 function Shell() {
   const location = useLocation();
   const isReader = location.pathname.startsWith("/read");
-  const hasLast = Boolean(localStorage.getItem("ptg:lastRead"));
+  const hasLast = useLastReadTab(location.pathname);
   const [dlOpen, setDlOpen] = useDownloadsOpen();
 
   /* the downloads popup opens itself when a download is launched (the queue
