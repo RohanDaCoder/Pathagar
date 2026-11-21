@@ -1,0 +1,9 @@
+# Pathagar — https://pathagarz.netlify.app/
+# All app views are hash routes of the single index page; /pdf/* is a
+# reverse proxy for the guide-book PDF host (runtime fetches, not pages).
+
+User-agent: *
+Allow: /
+Disallow: /pdf/
+
+Sitemap: https://pathagarz.netlify.app/sitemap.xml

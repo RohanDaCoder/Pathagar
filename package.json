@@ -1,6 +1,6 @@
 {
   "name": "me.rohandacoder.pathagar",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "private": true,
   "description": "Pathagar \u2014 Class 9-10 guide book reader (installable PWA)",
   "type": "module",
