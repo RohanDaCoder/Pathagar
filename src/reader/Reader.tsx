@@ -19,7 +19,7 @@ import { DB } from "@/db";
 import { errMessage } from "@/lib/errors";
 import { parseBookName, stripLeadNum } from "@/lib/titles";
 import type { ChapterMeta } from "@/types";
-import { clampZoom, PdfEngine } from "./pdfEngine";
+import { clampZoom, MAX_ZOOM, PdfEngine } from "./pdfEngine";
 import { usePinchSurface } from "./usePinchSurface";
 
 const PAD = 16;
@@ -43,6 +43,7 @@ export function Reader() {
   const [zoom, setZoom] = useState(0);
   const [fitMode, setFitMode] = useState<FitMode>("width");
   const [zoomPct, setZoomPct] = useState(0); // displayed % of current render
+  const [fitPct, setFitPct] = useState(0); // floor %: the current fit scale
   const lastPageRef = useRef(0); // detects page turns (scroll reset) vs zooms
   const stateRef = useRef<{
     pageNum: number;
@@ -69,8 +70,9 @@ export function Reader() {
       await engine.render(page, scale);
       setNumPages(engine.numPages);
       setZoomPct(Math.round(clampZoom(scale) * 100));
+      setFitPct(Math.round(fitScale() * 100)); // the zoom-out floor
     },
-    [engine],
+    [engine, fitScale],
   );
 
   const turnPage = useCallback(
@@ -160,7 +162,14 @@ export function Reader() {
     if (!wrap || typeof ResizeObserver === "undefined") return undefined;
     let t: ReturnType<typeof setTimeout> | null = null;
     const ro = new ResizeObserver(() => {
-      if (stateRef.current.zoom) return; // manual zoom stays
+      setFitPct(Math.round(fitScale() * 100)); // floor moves with the viewport
+      if (stateRef.current.zoom) {
+        /* rotation can shrink the viewport; a manual zoom that fell below
+           the new fit floor returns to auto-fit (the floor is the invariant
+           "never smaller than fits") */
+        if (stateRef.current.zoom < fitScale()) setZoom(0);
+        return; // other manual zooms stay
+      }
       if (t) clearTimeout(t);
       t = setTimeout(() => {
         if (engine.ready && !loading)
@@ -176,8 +185,11 @@ export function Reader() {
 
   const zoomBy = useCallback(
     (factor: number) => {
+      /* floor = the current fit scale: zooming out stops once the page
+         fully fits the viewport — beyond that it would only shrink into
+         gray gutters (the "pdf length" bound) */
       const cur = stateRef.current.zoom || fitScale();
-      setZoom(clampZoom(cur * factor));
+      setZoom(clampZoom(cur * factor, fitScale()));
     },
     [fitScale],
   );
@@ -228,6 +240,12 @@ export function Reader() {
       setPageNum(Math.min(Math.max(n, 1), numPages));
   }
 
+  /* header affordance: zoom-out bottoms out at the fit floor (page fully
+     fits), zoom-in at the absolute max — rounded-% compares with ±1
+     tolerance; both values are state, set where the floor can move */
+  const atMin = zoomPct <= fitPct + 1;
+  const atMax = zoomPct >= MAX_ZOOM * 100 - 1;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <ErrorDialog
@@ -270,6 +288,7 @@ export function Reader() {
           size="icon"
           variant="ghost"
           aria-label="Zoom out"
+          disabled={atMin}
           onClick={() => zoomBy(1 / 1.25)}
         >
           <Minus className="size-4" aria-hidden="true" />
@@ -278,6 +297,7 @@ export function Reader() {
           size="icon"
           variant="ghost"
           aria-label="Zoom in"
+          disabled={atMax}
           onClick={() => zoomBy(1.25)}
         >
           <Plus className="size-4" aria-hidden="true" />
