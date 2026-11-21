@@ -55,9 +55,7 @@ export function usePinchSurface(opts: PinchSurfaceOpts) {
       const canvas = o.current.canvasRef.current;
       if (!canvas || !anchor) return;
       const ratio = dist() / pinchStartDist;
-      /* floor = current fit scale: a pinch-out stops once the page fully
-         fits the viewport (same bound as the zoom-out button) */
-      const z = clampZoom(pinchBaseZoom * ratio, o.current.fitScale());
+      const z = clampZoom(pinchBaseZoom * ratio);
       pinchRatio = z / pinchBaseZoom;
       canvas.style.width = `${Math.round(baseW * pinchRatio)}px`;
       canvas.style.height = `${Math.round(baseH * pinchRatio)}px`;
@@ -72,7 +70,7 @@ export function usePinchSurface(opts: PinchSurfaceOpts) {
     const commitPinch = () => {
       pinchStartDist = 0;
       anchor = null;
-      const z = clampZoom(pinchBaseZoom * pinchRatio, o.current.fitScale());
+      const z = clampZoom(pinchBaseZoom * pinchRatio);
       /* a no-op pinch must not lock in a manual zoom */
       if (Math.abs(z - (o.current.getZoom() || o.current.fitScale())) > 0.001)
         o.current.setZoom(z); // re-renders at the same size — no visual jump
