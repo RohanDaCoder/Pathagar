@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,7 +36,12 @@ export function Settings() {
           <ChevronLeft className="size-4" aria-hidden="true" /> Home
         </Link>
       </nav>
-      <h1 className="mb-4 text-xl font-bold">Settings</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Settings2 className="size-5" aria-hidden="true" />
+        </span>
+        <h1 className="text-xl font-bold">Settings</h1>
+      </div>
 
       <fieldset className="grid gap-3">
         <legend className="mb-1 text-sm font-semibold">Appearance</legend>
