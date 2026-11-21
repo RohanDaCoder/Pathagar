@@ -74,14 +74,12 @@ export function Pick() {
             >
               {isMcqBook(bk.name) ? "MCQ" : "CQ"}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold">
-                {isMcqBook(bk.name) ? "MCQ" : "CQ"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {catalog().chapterCountOf(bk.id) || "…"} chapters
-              </p>
-            </div>
+            {/* the chip carries the visible label; keep a screen-reader name
+                and the spacer that pushes the chevron to the right edge */}
+            <span className="sr-only">
+              {isMcqBook(bk.name) ? "MCQ version" : "CQ version"}
+            </span>
+            <div className="min-w-0 flex-1" aria-hidden="true" />
             <ChevronRight
               className="size-5 shrink-0 text-muted-foreground"
               aria-hidden="true"

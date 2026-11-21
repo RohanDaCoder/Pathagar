@@ -151,14 +151,22 @@ export function ChapterRow({
         aria-hidden="true"
       >
         {ch.label ? (
-          <>
-            <span className="text-[11px] font-medium leading-none opacity-80">
-              {ch.label.split(" ")[0]}
-            </span>
+          ch.label.includes(" ") ? (
+            <>
+              <span className="text-[11px] font-medium leading-none opacity-80">
+                {ch.label.split(" ")[0]}
+              </span>
+              <span className="text-base font-bold leading-tight">
+                {bnNum(ch.label.split(" ").slice(1).join(" ")) || "·"}
+              </span>
+            </>
+          ) : (
+            /* bare-number labels ("২১" from "21 - Name") have no kind word —
+               render the number alone instead of a number-over-bullet chip */
             <span className="text-base font-bold leading-tight">
-              {bnNum(ch.label.split(" ").slice(1).join(" ")) || "·"}
+              {bnNum(ch.label) || ch.label}
             </span>
-          </>
+          )
         ) : (
           <Sparkles className="size-4" aria-hidden="true" />
         )}

@@ -58,6 +58,13 @@ describe("parseTitle — numbered formats", () => {
     );
   });
 
+  test("bare-number labels: ASCII for English titles, Bangla for Bengali", () => {
+    expect(parseTitle("1 - The Sentence").label).toBe("1");
+    expect(parseTitle("21 - Completing Sentences").label).toBe("21");
+    expect(parseTitle("2.1 পদার্থের অবস্থা").label).toBe("২.১");
+    expect(parseTitle("২. সেট ও ফাংশন").label).toBe("২");
+  });
+
   test("Unit / Chapter / Lesson labels", () => {
     expect(parseTitle("Unit-01 Sense of Self").number).toBe(1);
     expect(parseTitle("SSC Physics Guide Chapter - 1").number).toBe(1);
