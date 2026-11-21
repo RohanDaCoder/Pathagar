@@ -38,3 +38,15 @@ Cache-Control = "no-cache"
 for = "/manifest.webmanifest"
 [headers.values]
 Cache-Control = "no-cache"
+
+# SEO assets: crawlers fetch these directly; short cache so redesigns
+# propagate quickly, long enough to be polite to fetch bursts.
+[[headers]]
+for = "/og-image.png"
+[headers.values]
+Cache-Control = "public, max-age=3600"
+
+[[headers]]
+for = "/sitemap.xml"
+[headers.values]
+Cache-Control = "public, max-age=3600"

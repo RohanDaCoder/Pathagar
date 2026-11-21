@@ -95,6 +95,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,mjs,css,html,woff2,png,webmanifest}"],
+        globIgnores: ["**/og-image.png"], // social-share card: crawler asset, not app runtime
         cleanupOutdatedCaches: true,
         navigateFallback: "index.html",
         runtimeCaching: [
