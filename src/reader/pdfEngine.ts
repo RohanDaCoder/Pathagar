@@ -23,14 +23,10 @@ async function ensurePdfJs(): Promise<PdfjsLib> {
   return pdfjs;
 }
 
-/* MIN_ZOOM is only an absolute safety net (pathological page sizes); the
-   real zoom-out floor is dynamic — the reader passes the current fit scale,
-   so a page can never shrink below "fully fits the viewport" (zooming out
-   further would just trade page for gray gutters). */
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 5;
-export const clampZoom = (z: number, min = MIN_ZOOM) =>
-  Math.min(MAX_ZOOM, Math.max(min, z));
+export const clampZoom = (z: number) =>
+  Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
 export class PdfEngine {
   private doc: PDFDocumentProxy | null = null;
