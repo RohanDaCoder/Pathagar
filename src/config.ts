@@ -3,7 +3,7 @@
    re-pointing the app at a different backend or host. */
 
 export const APP_NAME = "Pathagar";
-export const APP_VERSION = "1.9.1";
+export const APP_VERSION = "1.9.2";
 
 /** The original app's Laravel backend. */
 export const API_URL = "https://books.tetashweb.xyz/api/v1/app/";
