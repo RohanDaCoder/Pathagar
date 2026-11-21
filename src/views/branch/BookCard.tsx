@@ -4,9 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { catalog } from "@/catalog";
 import { STREAM_STYLE } from "@/lib/streamStyle";
-import { SUBJECT_STRIP } from "@/lib/subjectStyle";
 import type { Stream } from "@/lib/titles";
-import { isTwin, nz, parseBookName } from "@/lib/titles";
+import { isTwin, parseBookName } from "@/lib/titles";
 import type { Book } from "@/types";
 
 export function BookCard({
@@ -24,9 +23,6 @@ export function BookCard({
 }) {
   const st = STREAM_STYLE[stream];
   const bp = parseBookName(bk.name);
-  /* per-subject palette overrides the stream hue; unmapped subjects
-     (ইংরেজি ২য় পত্র, ইতিহাস, Madrasah guides) keep the stream strip */
-  const strip = SUBJECT_STRIP[nz(bp.name)] ?? st.strip;
   /* the MCQ/CQ twin of this subject — same core name, opposite variant */
   const twin = books.find(
     (x) => isTwin(bk, x) && String(x.id) !== String(bk.id),
@@ -44,7 +40,7 @@ export function BookCard({
     >
       {/* stream accent strip */}
       <span
-        className={`absolute inset-x-0 top-0 h-1.5 ${strip}`}
+        className={`absolute inset-x-0 top-0 h-1.5 ${st.strip}`}
         aria-hidden="true"
       />
       <span
