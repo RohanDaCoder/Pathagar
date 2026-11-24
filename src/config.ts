@@ -20,10 +20,13 @@ export const DL_CONCURRENCY = 2;
 
 export interface Settings {
   theme: string;
+  /** Reader: flip the PDF page's own colors (white↔black). */
+  invert: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "auto",
+  invert: false,
 };
 
 /** localStorage is absent under `bun test` and can throw in private mode */
@@ -41,11 +44,11 @@ function loadSettings(): Settings {
   if (!raw) return s;
   try {
     const parsed: unknown = JSON.parse(raw);
-    const theme =
-      typeof parsed === "object" && parsed !== null
-        ? Reflect.get(parsed, "theme")
-        : null;
+    if (typeof parsed !== "object" || parsed === null) return s;
+    const theme = Reflect.get(parsed, "theme");
     if (typeof theme === "string") s.theme = theme;
+    const invert = Reflect.get(parsed, "invert");
+    if (typeof invert === "boolean") s.invert = invert;
   } catch {
     /* corrupted settings — fall back to defaults */
   }
