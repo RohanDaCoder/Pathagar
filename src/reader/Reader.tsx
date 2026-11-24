@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ChevronLeft,
+  Contrast,
   ExternalLink,
   Maximize2,
   Minus,
@@ -15,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ErrorDialog } from "@/components/ErrorDialog";
 import { toast } from "sonner";
+import { saveSettings, settings } from "@/config";
 import { DB } from "@/db";
 import { errMessage } from "@/lib/errors";
 import { parseBookName, stripLeadNum } from "@/lib/titles";
@@ -43,6 +45,8 @@ export function Reader() {
   const [zoom, setZoom] = useState(0);
   const [fitMode, setFitMode] = useState<FitMode>("width");
   const [zoomPct, setZoomPct] = useState(0); // displayed % of current render
+  /* page-color inversion (white↔black) — persisted across sessions */
+  const [invert, setInvert] = useState(settings.invert);
   const lastPageRef = useRef(0); // detects page turns (scroll reset) vs zooms
   const stateRef = useRef<{
     pageNum: number;
@@ -212,6 +216,15 @@ export function Reader() {
     return () => wrap.removeEventListener("wheel", onWheel);
   }, [zoomBy]);
 
+  /* flip the page's own colors via a CSS filter — canvas pixels stay
+     untouched, so no re-render is needed and zoom/pinch keep working */
+  function toggleInvert() {
+    const next = !invert;
+    setInvert(next);
+    settings.invert = next;
+    saveSettings();
+  }
+
   async function openInTab() {
     const blob = await DB.getFile(chapterId);
     if (!blob) return;
@@ -297,6 +310,16 @@ export function Reader() {
         <Button
           size="icon"
           variant="ghost"
+          aria-label="Invert page colors"
+          aria-pressed={invert}
+          title="Invert page colors (white ↔ black)"
+          onClick={toggleInvert}
+        >
+          <Contrast className="size-4" aria-hidden="true" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
           aria-label="Open in new tab"
           onClick={() => void openInTab()}
         >
@@ -327,7 +350,9 @@ export function Reader() {
               canvasRef.current = c;
               if (c) engine.attach(c);
             }}
-            className="mx-auto my-2 max-w-none shrink-0 shadow-lg"
+            className={`mx-auto my-2 max-w-none shrink-0 shadow-lg ${
+              invert ? "invert" : ""
+            }`}
           />
         )}
       </div>
